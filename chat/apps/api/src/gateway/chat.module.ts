@@ -1,11 +1,23 @@
 import { ChatGateway } from './chat.gateway';
-import { forwardRef, Module } from '@nestjs/common';
-import { ApiModule } from '../api.module';
-import { ApiService } from '../api.service';
+import {
+  ClientProviderOptions,
+  ClientsModule,
+  Transport,
+} from '@nestjs/microservices';
+import { Module } from '@nestjs/common';
+import { ChatService } from './chat.service';
+
+const ChatClientOptions: ClientProviderOptions = {
+  name: 'CHAT_SERVICE',
+  transport: Transport.TCP,
+  options: {
+    port: 3001,
+  },
+};
 
 @Module({
-  imports: [forwardRef(() => ApiModule)],
+  imports: [ClientsModule.register([ChatClientOptions])],
   controllers: [],
-  providers: [ChatGateway, ApiService],
+  providers: [ChatGateway, ChatService],
 })
 export class ChatModule {}

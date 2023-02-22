@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-	<title>Socket.IO chat</title>
+	<title>Chat</title>
 	<style>
 		body {
 			margin: 0;
@@ -9,7 +9,7 @@
 			font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 		}
 
-		#form {
+		#message_form {
 			background: rgba(0, 0, 0, 0.15);
 			padding: 0.25rem;
 			position: fixed;
@@ -22,7 +22,7 @@
 			backdrop-filter: blur(10px);
 		}
 
-		#input {
+		#message_input {
 			border: none;
 			padding: 0 1rem;
 			flex-grow: 1;
@@ -30,11 +30,11 @@
 			margin: 0.25rem;
 		}
 
-		#input:focus {
+		#message_input:focus {
 			outline: none;
 		}
 
-		#form>button {
+		#message_form>button {
 			background: #333;
 			border: none;
 			padding: 0 1rem;
@@ -61,38 +61,77 @@
 </head>
 
 <body>
-	<ul id="messages"></ul>
-	<form id="form" action="">
-		<input id="input" autocomplete="off" /><button>Send</button>
+	<form id="channel_form">
+		<input id="channel_input" autocomplete="off" />
+		<button id="create_channel_btn">Create Channel</button>
+		<button id="join_channel_btn">Join Channel</button>
 	</form>
-	<input id="username" autocomplete="off" />
+	<ul id="messages"></ul>
+	<form id="message_form">
+		<input id="message_channel" autocomplete="off" />
+		<input id="message_input" autocomplete="off" />
+		<button>Send</button>
+	</form>
 	<script src="socket.io.js"></script>
 
 	<script>
-		var messages = document.getElementById('messages');
-		var form = document.getElementById('form');
-		var input = document.getElementById('input');
-		var username = document.getElementById('username');
+		let channels = [];
+		let user_id = crypto.randomUUID();
+		// socket
+		let socket = io("ws://localhost:3000", {path: '/chat', auth: {token: user_id}});
 
-		var socket = io("ws://localhost:3000", {path: '/chat', auth: {token: username.value}});
+		//elements
+		var message_form = document.getElementById('message_form');
+		var message_input = document.getElementById('message_input');
+		var message_channel= document.getElementById('message_channel');
+		var channel_input = document.getElementById('channel_input');
+		var create_channel_btn = document.getElementById('create_channel_btn');
+		var join_channel_btn = document.getElementById('join_channel_btn');
 
-		form.addEventListener('submit', function (e) {
+		create_channel_btn.addEventListener('click', (e) => {
 			e.preventDefault();
-			if (input.value) {
-				socket.emit('message.create', input.value);
-				input.value = '';
-			}
-		});
-
-		socket.on('connect', function () {
-			console.log('connect');
+			console.log(channel_input.value);
+			socket.emit('channel.create', channel_input.value);
+			channel_input.value = ''
 		})
 
-		socket.on('message', function (msg) {
+		join_channel_btn.addEventListener('click', (e) => {
+			e.preventDefault();
+			socket.emit('channel.join', channel_input.value);
+			channel_input.innerHTML = ''
+		})
+
+		message_form.addEventListener('submit', function (e) {
+			e.preventDefault();
+			socket.emit('message.create', { channel_id: message_channel.value, data: message_input.value });
+			append_message({ user_id, channel_id: message_channel.value, data: message_input.value });
+			message_input.value = '';
+		});
+
+		socket.on('channel.join', function (msg) {
+			const { code, channel_id, created } = msg;
+			if (channel_id && code == 200)
+			{
+				channels.push(channel_id);
+				console.log(`joined: ${channel_id}, created: ${created}`)
+			}
+			else
+				console.log(`failed to join channel ... `)
+		});
+
+		socket.on('message.create', function (msg) {
+			append_message(msg);
+		});
+
+		function append_message(msg)
+		{
 			var item = document.createElement('li');
-			item.textContent = msg;
+			item.textContent = `[${msg.channel_id}] ${msg.user_id}: "${msg.data}"`;
 			messages.appendChild(item);
-			window.scrollTo(0, document.body.scrollHeight);
+		}
+
+		socket.on('error', function (msg) {
+			console.error(msg);
 		});
 	</script>
 </body>
