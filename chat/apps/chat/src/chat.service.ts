@@ -1,7 +1,9 @@
 import { Injectable } from '@nestjs/common';
+import { RpcException } from '@nestjs/microservices';
 import { randomUUID } from 'crypto';
 import e from 'express';
 import { CreateChannelDto } from './dto/CreateChannel.dto';
+import { JoinChannelDto } from './dto/JoinChannel.dto';
 import { Channel, ChannelUser } from './interfaces/chat.interfaces';
 import { Message } from './interfaces/chat.interfaces';
 
@@ -13,29 +15,38 @@ export class ChatService {
   private messages: Message[] = [];
   private chat_user: ChannelUser[] = [];
 
+  channelGetAll(): Channel[] {
+    return this.channels;
+  }
+
   createUser(id: string) {
     const user = this.users.find((x) => id === x);
     if (!user) this.users.push(id);
   }
 
-  createChannel(data: CreateChannelDto): string | undefined {
+  channelCreateOne(data: CreateChannelDto): string | undefined {
     const id = randomUUID();
     this.channels.push({ id, owner: data.user_id, name: data.name });
     return id;
   }
 
-  joinChannel(data: ChannelUser): boolean {
+  channelJoinOne(data: JoinChannelDto): boolean {
+    console.log(data);
     const channel = this.channels.find((x) => data.channel_id === x.id);
     if (!channel) {
       return false;
     }
     if (
-      !this.chat_user.find(
+      this.chat_user.find(
         (elem) =>
           elem.user_id === data.user_id && elem.channel_id === data.channel_id,
       )
     )
-      this.chat_user.push(data);
+      throw new RpcException({
+        statusCode: 400,
+        message: 'Already subscribed to this channel.',
+      });
+    this.chat_user.push(data);
     return true;
   }
 

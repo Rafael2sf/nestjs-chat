@@ -1,7 +1,9 @@
 import { HttpException, HttpStatus, Inject, Injectable } from '@nestjs/common';
-import { ClientProxy, RpcException } from '@nestjs/microservices';
+import { ClientProxy } from '@nestjs/microservices';
 import { lastValueFrom } from 'rxjs';
 import { UserMessage } from './chat.interfaces';
+import { Channel } from './interfaces/Channel.dto';
+import { UserChannel } from './interfaces/UserChannel.interface';
 
 interface TCPResponse<T> {
   success: boolean;
@@ -15,20 +17,9 @@ export class ChatService {
   ) {}
   /* Development ONLY (testing) */
 
-  createUser(id: string) {
-    this.chatService.emit<string>('user.create', id);
-  }
-
   //   createChannel(id: string) {
   //     this.chatService.emit<string>('channel.create', id);
   //   }
-
-  async joinChannel(user_id: string, channel_id: string): Promise<boolean> {
-    return lastValueFrom(
-      this.chatService.send<boolean>('channel.join', { user_id, channel_id }),
-    );
-  }
-
   /* Source code */
 
   // Returns true either the user can send this message or not
@@ -40,17 +31,32 @@ export class ChatService {
 
   /* v2 */
 
-  // (success: boolean, data: {})
+  async getChannels(): Promise<Channel[]> {
+    const res = await lastValueFrom(
+      this.chatService.send<TCPResponse<Channel[]>>('channel.get', {}),
+    );
+    if (!res.success)
+      throw new HttpException('failed to get channels', HttpStatus.FORBIDDEN);
+    return res.data;
+  }
 
-  async createChannel(user_id: string, chat_name: string): Promise<string> {
-    const resp = await lastValueFrom(
+  async createChannel(user_id: string, name: string): Promise<string> {
+    const res = await lastValueFrom(
       this.chatService.send<TCPResponse<string>>('channel.create', {
         user_id,
-        chat_name,
+        name,
       }),
     );
-    if (!resp.success)
-      throw new HttpException('failed to create channel', HttpStatus.FORBIDDEN);
-    return resp.data;
+    if (!res.success) return res.data;
+  }
+
+  async joinChannel(user_id: string, channel_id: string): Promise<boolean> {
+    const res = await lastValueFrom(
+      this.chatService.send<TCPResponse<UserChannel>>('channel.join', {
+        user_id,
+        channel_id,
+      }),
+    );
+    return res.success;
   }
 }

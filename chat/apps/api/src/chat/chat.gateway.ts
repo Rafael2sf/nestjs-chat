@@ -98,9 +98,9 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   handleConnection(client: Socket) {
     const id = client?.handshake?.auth?.token;
     this.logger.log(`connected: ${client.id} auth: ${id}`);
-    if (!id || typeof id != 'string') {
-      client.emit('error', 'invalid auth');
-    } else this.chatService.createUser(id);
+    // if (!id || typeof id != 'string') {
+    //   client.emit('error', 'invalid auth');
+    // } else this.chatService.createUser(id);
   }
 
   handleDisconnect(client: Socket) {

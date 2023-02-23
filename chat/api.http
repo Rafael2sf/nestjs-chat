@@ -1,3 +1,7 @@
+### Get channels
+GET http://localhost:3000/channels/
+Authorization: Bearer 0123456789
+
 ### Create channel
 
 POST http://localhost:3000/channels/
@@ -10,7 +14,7 @@ Content-Type: application/json
 
 ### Join Channel
 
-POST http://localhost:3000/channels/1/join
+POST http://localhost:3000/channels/ac5ab473-fd9b-41f6-a1b5-bb4ed6941410/join
 Authorization: Bearer 123456789
 
 ### Leave Channel
