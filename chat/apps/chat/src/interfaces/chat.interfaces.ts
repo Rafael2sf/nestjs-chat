@@ -5,7 +5,13 @@
 //   created?: boolean;
 // }
 
-export interface ChatUser {
+export interface Channel {
+  id: string;
+  owner: string;
+  name: string;
+}
+
+export interface ChannelUser {
   user_id: string;
   channel_id: string;
 }

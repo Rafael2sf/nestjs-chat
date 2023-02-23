@@ -1,7 +1,12 @@
-import { Inject, Injectable } from '@nestjs/common';
-import { ClientProxy } from '@nestjs/microservices';
+import { HttpException, HttpStatus, Inject, Injectable } from '@nestjs/common';
+import { ClientProxy, RpcException } from '@nestjs/microservices';
 import { lastValueFrom } from 'rxjs';
 import { UserMessage } from './chat.interfaces';
+
+interface TCPResponse<T> {
+  success: boolean;
+  data?: T;
+}
 
 @Injectable()
 export class ChatService {
@@ -14,9 +19,9 @@ export class ChatService {
     this.chatService.emit<string>('user.create', id);
   }
 
-  createChannel(id: string) {
-    this.chatService.emit<string>('channel.create', id);
-  }
+  //   createChannel(id: string) {
+  //     this.chatService.emit<string>('channel.create', id);
+  //   }
 
   async joinChannel(user_id: string, channel_id: string): Promise<boolean> {
     return lastValueFrom(
@@ -31,5 +36,21 @@ export class ChatService {
     return lastValueFrom(
       this.chatService.send<boolean>('message.create', message),
     );
+  }
+
+  /* v2 */
+
+  // (success: boolean, data: {})
+
+  async createChannel(user_id: string, chat_name: string): Promise<string> {
+    const resp = await lastValueFrom(
+      this.chatService.send<TCPResponse<string>>('channel.create', {
+        user_id,
+        chat_name,
+      }),
+    );
+    if (!resp.success)
+      throw new HttpException('failed to create channel', HttpStatus.FORBIDDEN);
+    return resp.data;
   }
 }

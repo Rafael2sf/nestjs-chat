@@ -1,4 +1,4 @@
-import { Logger } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { Payload } from '@nestjs/microservices';
 import {
   ConnectedSocket,
@@ -24,51 +24,51 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   // User created channel
   // { id: channel_id } => { code: 200/400 }
-  @SubscribeMessage('channel.create')
-  OnChannelCreate(@Payload() data: any, @ConnectedSocket() client: Socket) {
-    const id = client?.handshake?.auth?.token;
-    if (id && data && typeof data == 'string') {
-      this.logger.log(
-        `channel.create: ${client.id}, user: ${id}, channel_id: ${data}`,
-      );
-      this.chatService.createChannel(data);
-      client.join(data);
-      client.emit('channel.join', {
-        code: 200,
-        channel_id: data,
-        created: true,
-      });
-    } else {
-      client.emit('channel.join', {
-        code: 400,
-      });
-    }
-  }
+  //   @SubscribeMessage('channel.create')
+  //   OnChannelCreate(@Payload() data: any, @ConnectedSocket() client: Socket) {
+  //     const id = client?.handshake?.auth?.token;
+  //     if (id && data && typeof data == 'string') {
+  //       this.logger.log(
+  //         `channel.create: ${client.id}, user: ${id}, channel_id: ${data}`,
+  //       );
+  //       this.chatService.createChannel(data);
+  //       client.join(data);
+  //       client.emit('channel.join', {
+  //         code: 200,
+  //         channel_id: data,
+  //         created: true,
+  //       });
+  //     } else {
+  //       client.emit('channel.join', {
+  //         code: 400,
+  //       });
+  //     }
+  //   }
 
   // user join channel
   // [userid, channelid] => [ code: 200/400]
-  @SubscribeMessage('channel.join')
-  async OnChannelJoin(@Payload() data: any, @ConnectedSocket() client: Socket) {
-    const id = client?.handshake?.auth?.token;
-    if (id) {
-      const joined = await this.chatService.joinChannel(id, data);
-      if (joined) {
-        this.logger.log(
-          `channel.join: ${client.id}, user: ${id}, channel_id: ${data}`,
-        );
-        client.join(data);
-        client.emit('channel.join', {
-          code: 200,
-          channel_id: data,
-          created: false,
-        });
-        return;
-      }
-    }
-    client.emit('channel.join', {
-      code: 400,
-    });
-  }
+  //   @SubscribeMessage('channel.join')
+  //   async OnChannelJoin(@Payload() data: any, @ConnectedSocket() client: Socket) {
+  //     const id = client?.handshake?.auth?.token;
+  //     if (id) {
+  //       const joined = await this.chatService.joinChannel(id, data);
+  //       if (joined) {
+  //         this.logger.log(
+  //           `channel.join: ${client.id}, user: ${id}, channel_id: ${data}`,
+  //         );
+  //         client.join(data);
+  //         client.emit('channel.join', {
+  //           code: 200,
+  //           channel_id: data,
+  //           created: false,
+  //         });
+  //         return;
+  //       }
+  //     }
+  //     client.emit('channel.join', {
+  //       code: 400,
+  //     });
+  //   }
 
   /* source code */
 
@@ -107,3 +107,10 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.logger.log(`disconnect: ${client.id}`);
   }
 }
+
+// channel.join {user_id, channel_id}
+// channel.leave {user_id, channel_id}
+// message.typing {user_id}
+// message.create {user_id, channel_id, data}
+// message.update ?
+// message.delete ?

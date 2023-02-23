@@ -6,7 +6,13 @@ import {
   Payload,
 } from '@nestjs/microservices';
 import { ChatService } from './chat.service';
-import { ChatUser, Message } from './interfaces/chat.interfaces';
+import { CreateChannelDto } from './dto/CreateChannel.dto';
+import { ChannelUser, Message } from './interfaces/chat.interfaces';
+
+interface TCPResponse<T> {
+  success: boolean;
+  data?: T;
+}
 
 @Controller()
 export class ChatController {
@@ -19,14 +25,18 @@ export class ChatController {
     return this.chatService.createUser(data);
   }
 
-  @EventPattern('channel.create')
-  OnChannelCreate(@Payload() data: string) {
-    this.logger.log(`channel.create: ${data}`);
-    return this.chatService.createChannel(data);
+  @MessagePattern('channel.create')
+  OnChannelCreate(@Payload() data: CreateChannelDto): TCPResponse<string> {
+    this.logger.log(`channel.create: ${JSON.stringify(data)}`);
+    const channel_id = this.chatService.createChannel(data);
+    const value = channel_id
+      ? { success: true, data: channel_id }
+      : { success: false };
+    return value;
   }
 
   @MessagePattern('channel.join')
-  OnChannelJoin(@Payload() data: ChatUser): boolean {
+  OnChannelJoin(@Payload() data: ChannelUser): boolean {
     this.logger.log(`channel.join: ${JSON.stringify(data)}`);
     return this.chatService.joinChannel(data);
   }

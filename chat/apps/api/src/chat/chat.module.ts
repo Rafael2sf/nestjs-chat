@@ -6,6 +6,7 @@ import {
 } from '@nestjs/microservices';
 import { Module } from '@nestjs/common';
 import { ChatService } from './chat.service';
+import { ChatController } from './chat.controller';
 
 const ChatClientOptions: ClientProviderOptions = {
   name: 'CHAT_SERVICE',
@@ -17,7 +18,7 @@ const ChatClientOptions: ClientProviderOptions = {
 
 @Module({
   imports: [ClientsModule.register([ChatClientOptions])],
-  controllers: [],
+  controllers: [ChatController],
   providers: [ChatGateway, ChatService],
 })
 export class ChatModule {}
