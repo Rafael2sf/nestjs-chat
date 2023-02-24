@@ -61,67 +61,60 @@
 </head>
 
 <body>
-	<form id="channel_form">
-		<input id="channel_input" autocomplete="off" />
-		<button id="create_channel_btn">Create Channel</button>
-		<button id="join_channel_btn">Join Channel</button>
+	<form id="register_form">
+		<input id="register_input" autocomplete="off" />
+		<button id="register_btn">Register</button>
+	</form>
+	<form id="room_form">
+		<input id="join_room_input" autocomplete="off" />
+		<button id="join_room_btn">Join Room</button>
 	</form>
 	<ul id="messages"></ul>
 	<form id="message_form">
-		<input id="message_channel" autocomplete="off" />
+		<input id="message_room" autocomplete="off" />
 		<input id="message_input" autocomplete="off" />
 		<button>Send</button>
 	</form>
 	<script src="socket.io.js"></script>
 
 	<script>
-		let channels = [];
-		let user_id = crypto.randomUUID();
 		// socket
-		let socket = io("ws://localhost:3000", {path: '/chat', auth: {token: user_id}});
+		let socket;
 
 		//elements
+		var register_form = document.getElementById('register_form');
 		var message_form = document.getElementById('message_form');
 		var message_input = document.getElementById('message_input');
-		var message_channel= document.getElementById('message_channel');
-		var channel_input = document.getElementById('channel_input');
-		var create_channel_btn = document.getElementById('create_channel_btn');
-		var join_channel_btn = document.getElementById('join_channel_btn');
+		var message_room = document.getElementById('message_room');
+		var join_room_input = document.getElementById('join_room_input');
+		var join_room_btn = document.getElementById('join_room_btn');
 
-		create_channel_btn.addEventListener('click', (e) => {
+		register_form.addEventListener('submit', function (e) {
 			e.preventDefault();
-			console.log(channel_input.value);
-			socket.emit('channel.create', channel_input.value);
-			channel_input.value = ''
+			socket = io("ws://localhost:3000", { path: '/chat', auth: { token: document.getElementById('register_input').value } });
+			
+			join_room_btn.addEventListener('click', (e) => {
+				e.preventDefault();
+			socket.emit('room.join', join_room_input.value);
+			join_room_input.value = ''
+			})
+		
+			message_form.addEventListener('submit', function (e) {
+				e.preventDefault();
+				socket.emit('message.create', { channel_id: message_room.value, data: message_input.value });
+				//append_message({ user_id: document.getElementById('register_input').value, channel_id: message_room.value, data: message_input.value });
+				message_input.value = '';
+			});
+
+			socket.on('room.join', function (msg) {
+				console.log(msg);
+			});
+			
+			socket.on('message.create', function (msg) {
+				console.log(msg);
+				append_message(msg);
+			});
 		})
-
-		join_channel_btn.addEventListener('click', (e) => {
-			e.preventDefault();
-			socket.emit('channel.join', channel_input.value);
-			channel_input.innerHTML = ''
-		})
-
-		message_form.addEventListener('submit', function (e) {
-			e.preventDefault();
-			socket.emit('message.create', { channel_id: message_channel.value, data: message_input.value });
-			append_message({ user_id, channel_id: message_channel.value, data: message_input.value });
-			message_input.value = '';
-		});
-
-		socket.on('channel.join', function (msg) {
-			const { code, channel_id, created } = msg;
-			if (channel_id && code == 200)
-			{
-				channels.push(channel_id);
-				console.log(`joined: ${channel_id}, created: ${created}`)
-			}
-			else
-				console.log(`failed to join channel ... `)
-		});
-
-		socket.on('message.create', function (msg) {
-			append_message(msg);
-		});
 
 		function append_message(msg)
 		{
@@ -130,9 +123,6 @@
 			messages.appendChild(item);
 		}
 
-		socket.on('error', function (msg) {
-			console.error(msg);
-		});
 	</script>
 </body>
 </html>

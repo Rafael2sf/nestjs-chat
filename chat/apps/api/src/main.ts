@@ -1,8 +1,6 @@
 import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
-import { useContainer } from 'class-validator';
 import { ApiModule } from './api.module';
-import { ChatExceptionFilter } from './chat/chat.exceptions';
 
 /* Flow
 
@@ -23,7 +21,6 @@ async function bootstrap() {
   const app = await NestFactory.create(ApiModule);
   app.enableCors();
   app.useGlobalPipes(new ValidationPipe());
-  app.useGlobalFilters(new ChatExceptionFilter());
   await app.listen(3000);
 }
 bootstrap();

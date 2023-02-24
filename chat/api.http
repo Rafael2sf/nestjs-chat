@@ -1,23 +1,22 @@
 ### Get channels
 GET http://localhost:3000/channels/
-Authorization: Bearer 0123456789
 
 ### Create channel
 
 POST http://localhost:3000/channels/
-Authorization: Bearer 0123456789
+Authorization: Bearer 1
 Content-Type: application/json
 
 {
-	"name": "TheBoys"
+	"name": "42"
 }
 
 ### Join Channel
 
-POST http://localhost:3000/channels/ac5ab473-fd9b-41f6-a1b5-bb4ed6941410/join
-Authorization: Bearer 123456789
+POST http://localhost:3000/channels/6f314b24-e2b3-49b4-b0c8-8a3de6263811/join
+Authorization: Bearer 2
 
-### Leave Channel
+### Leave Channel -- not implemented
 
 DELETE http://localhost:3000/channels/1/join
 Authorization: Bearer 123456789

@@ -1,22 +1,15 @@
-// export interface UserJoinChannel {
-//   code: number;
-//   user_id?: string;
-//   channel_id?: string;
-//   created?: boolean;
-// }
-
-export interface Channel {
+export interface IChannel {
   id: string;
   owner: string;
   name: string;
 }
 
-export interface ChannelUser {
+export interface IChannelUser {
   user_id: string;
   channel_id: string;
 }
 
-export interface Message {
+export interface IMessage {
   user_id: string;
   channel_id: string;
   data: string;

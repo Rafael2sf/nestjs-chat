@@ -8,12 +8,10 @@ import {
   Param,
   Post,
   Res,
-  UseFilters,
 } from '@nestjs/common';
 import { ChatService } from './chat.service';
 import { CreateChannelDto } from './dto/CreateChannel.dto';
 import { Response } from 'express';
-import { ChatExceptionFilter } from './chat.exceptions';
 
 @Controller('/')
 export class ChatController {
@@ -33,17 +31,14 @@ export class ChatController {
   @Get('/channels/')
   getChannels(@Headers('authorization') jwt, @Res() res: Response) {
     this.logger.log(`GET '/channels/' from ${jwt}`);
-    return this.chatService
+    this.chatService
       .getChannels()
       .then((value) => {
         res.json(value).send();
       })
-      .catch((err) => {
-        console.log(err);
-        res
-          .status(err.statusCode ?? err.code ?? 500)
-          .json(err.message)
-          .send();
+      .catch((e) => {
+        if (!e.statusCode) res.status(500).send();
+        else res.status(e.statusCode).json(e.message).send();
       });
   }
 
@@ -59,12 +54,16 @@ export class ChatController {
     @Headers('authorization') jwt,
     @Body() body: CreateChannelDto,
     @Res() res: Response,
-  ): any {
+  ) {
     this.logger.log(`POST '/channels/' from ${jwt}: chat_name => ${body.name}`);
-    return this.chatService
+    this.chatService
       .createChannel(jwt.split(' ')[1], body.name)
       .then((value) => {
-        res.json(value).send();
+        res.json({ channel_id: value }).send();
+      })
+      .catch((e) => {
+        if (!e.statusCode) res.status(500).send();
+        else res.status(e.statusCode).json(e.message).send();
       });
   }
 
@@ -85,11 +84,10 @@ export class ChatController {
     );
     return this.chatService
       .joinChannel(jwt.split(' ')[1], channel_id)
-      .then((value) => value)
-      .catch((err) => {
-        console.log(err);
-        res.status(err.code).json(err.message).send();
-        return err;
+      .then((_) => res.json().send)
+      .catch((e) => {
+        if (!e.statusCode) res.status(500).send();
+        else res.status(e.statusCode).json(e.message).send();
       });
   }
 
