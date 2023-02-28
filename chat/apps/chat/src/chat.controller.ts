@@ -5,7 +5,7 @@ import {CreateChannelDto} from './dto/CreateChannel.dto';
 import {CreateMessageDto} from './dto/CreateMessage.dto';
 import {UserChannelDto} from './dto/UserChannel.dto';
 import {IChannel, IMessage} from './interfaces/chat.interfaces';
-import {IChannelMessages} from './interfaces/IChannelMessages';
+import { ISimplifiedMessage } from './interfaces/IChannelMessages';
 
 @Controller()
 export class ChatController {
@@ -52,7 +52,7 @@ export class ChatController {
   }
 
   @MessagePattern('message.get')
-  OnMessageGet(@Payload() data: UserChannelDto): IChannelMessages[] {
+  OnMessageGet(@Payload() data: UserChannelDto): ISimplifiedMessage[] {
     this.logger.log(`message.get: ${JSON.stringify(data)}`);
     return this.chatService.messageGetAll(data);
   }

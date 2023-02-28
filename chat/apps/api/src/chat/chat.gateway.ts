@@ -31,7 +31,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       this.chatService
         .joinRoom(id, data)
         .then((_) => {
-          client.to(data).emit('room.join', {
+          client.to(data).to(client.id).emit('room.join', {
             statusCode: 200,
             user_id: id,
             channel_id: data,
@@ -51,9 +51,9 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   OnRoomLeave(@Payload() data: any, @ConnectedSocket() client: Socket) {
     const id = client?.handshake?.auth?.token;
     if (client.rooms.has(data)) {
-        this.logger.log(
-          `room.leave: ${client.id}, user_id: ${id}, channel_id: ${data}`,
-        );
+      this.logger.log(
+        `room.leave: ${client.id}, user_id: ${id}, channel_id: ${data}`,
+      );
       client.leave(data);
       client.to(data).emit('room.leave', {statusCode: 200, user_id: id, channel_id: data})
     }
@@ -84,7 +84,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         });
       })
       .catch((err) => {
-        client.emit('room.join', err);
+        client.emit('message.create', err);
       });
   }
 
