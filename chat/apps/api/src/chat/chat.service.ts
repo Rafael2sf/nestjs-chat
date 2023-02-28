@@ -1,8 +1,9 @@
-import { Inject, Injectable } from '@nestjs/common';
-import { ClientProxy } from '@nestjs/microservices';
-import { lastValueFrom } from 'rxjs';
-import { IChannel } from './interfaces/IChannel';
-import { IUserMessage } from './interfaces/IUserMessage';
+import {Inject, Injectable} from '@nestjs/common';
+import {ClientProxy} from '@nestjs/microservices';
+import {firstValueFrom} from 'rxjs';
+import {IChannel} from './interfaces/IChannel';
+import {ISimplifiedMessage} from './interfaces/IChannelMessages';
+import {IUserMessage} from './interfaces/IUserMessage';
 
 @Injectable()
 export class ChatService {
@@ -11,12 +12,12 @@ export class ChatService {
   ) {}
 
   // Channels
-  async getChannels(): Promise<IChannel[]> {
-    return lastValueFrom(this.chatService.send<IChannel[]>('channel.get', {}));
+  getChannels(): Promise<IChannel[]> {
+    return firstValueFrom(this.chatService.send<IChannel[]>('channel.get', {}));
   }
 
-  async createChannel(user_id: string, name: string): Promise<string> {
-    return lastValueFrom(
+  createChannel(user_id: string, name: string): Promise<string> {
+    return firstValueFrom(
       this.chatService.send<string>('channel.create', {
         user_id,
         name,
@@ -24,8 +25,17 @@ export class ChatService {
     );
   }
 
-  async joinChannel(user_id: string, channel_id: string): Promise<boolean> {
-    return await lastValueFrom(
+  deleteChannel(user_id: string, channel_id: string): Promise<string> {
+    return firstValueFrom(
+      this.chatService.send<string>('channel.delete', {
+        user_id,
+        channel_id,
+      }),
+    );
+  }
+
+  joinChannel(user_id: string, channel_id: string): Promise<boolean> {
+    return firstValueFrom(
       this.chatService.send<boolean>('channel.join', {
         user_id,
         channel_id,
@@ -33,9 +43,19 @@ export class ChatService {
     );
   }
 
+  leaveChannel(user_id: string, channel_id: string): Promise<boolean> {
+    return firstValueFrom(
+      this.chatService.send<boolean>('channel.leave', {
+        user_id,
+        channel_id,
+      }),
+    );
+  }
+
+
   // Rooms
-  async joinRoom(user_id: string, channel_id: string): Promise<boolean> {
-    return await lastValueFrom(
+  joinRoom(user_id: string, channel_id: string): Promise<boolean> {
+    return firstValueFrom(
       this.chatService.send<boolean>('room.join', {
         user_id,
         channel_id,
@@ -44,8 +64,18 @@ export class ChatService {
   }
 
   // Messages
-  async createMessage(message: IUserMessage): Promise<boolean> {
-    return lastValueFrom(
+  getMessages(user_id: string, channel_id: string): Promise<ISimplifiedMessage[]>
+  {
+    return firstValueFrom(
+      this.chatService.send<ISimplifiedMessage[]>('message.get', {
+        user_id,
+        channel_id
+      }),
+    );
+  }
+
+  createMessage(message: IUserMessage): Promise<boolean> {
+    return firstValueFrom(
       this.chatService.send<boolean>('message.create', message),
     );
   }

@@ -68,6 +68,7 @@
 	<form id="room_form">
 		<input id="join_room_input" autocomplete="off" />
 		<button id="join_room_btn">Join Room</button>
+		<button id="leave_room_btn">Leave Room</button>
 	</form>
 	<ul id="messages"></ul>
 	<form id="message_form">
@@ -88,6 +89,7 @@
 		var message_room = document.getElementById('message_room');
 		var join_room_input = document.getElementById('join_room_input');
 		var join_room_btn = document.getElementById('join_room_btn');
+		var leave_room_btn = document.getElementById('leave_room_btn');
 
 		register_form.addEventListener('submit', function (e) {
 			e.preventDefault();
@@ -96,7 +98,11 @@
 			join_room_btn.addEventListener('click', (e) => {
 				e.preventDefault();
 			socket.emit('room.join', join_room_input.value);
-			join_room_input.value = ''
+			})
+	
+      leave_room_btn.addEventListener('click', (e) => {
+				e.preventDefault();
+			  socket.emit('room.leave', join_room_input.value);
 			})
 		
 			message_form.addEventListener('submit', function (e) {
@@ -107,7 +113,21 @@
 			});
 
 			socket.on('room.join', function (msg) {
-				console.log(msg);
+        if (msg.statusCode === 200)
+        {
+				  msg.data = '@ joined channel @'
+				  console.log(msg);
+				  append_message(msg);
+        }
+			});
+			
+			socket.on('room.leave', function (msg) {
+        if (msg.data === 200)
+        {
+				  msg.data = '@ left channel @'
+				  console.log(msg);
+				  append_message(msg);
+        }
 			});
 			
 			socket.on('message.create', function (msg) {

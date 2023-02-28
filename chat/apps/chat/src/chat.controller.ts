@@ -1,9 +1,11 @@
-import { Controller, Logger } from '@nestjs/common';
-import { MessagePattern, Payload } from '@nestjs/microservices';
-import { ChatService } from './chat.service';
-import { CreateChannelDto } from './dto/CreateChannel.dto';
-import { JoinChannelDto } from './dto/JoinChannel.dto';
-import { IChannel, IMessage } from './interfaces/chat.interfaces';
+import {Controller, Logger} from '@nestjs/common';
+import {MessagePattern, Payload} from '@nestjs/microservices';
+import {ChatService} from './chat.service';
+import {CreateChannelDto} from './dto/CreateChannel.dto';
+import {CreateMessageDto} from './dto/CreateMessage.dto';
+import {UserChannelDto} from './dto/UserChannel.dto';
+import {IChannel, IMessage} from './interfaces/chat.interfaces';
+import {IChannelMessages} from './interfaces/IChannelMessages';
 
 @Controller()
 export class ChatController {
@@ -21,24 +23,44 @@ export class ChatController {
     return this.chatService.channelCreateOne(data);
   }
 
+  @MessagePattern('channel.delete')
+  OnChannelDelete(@Payload() data: UserChannelDto): boolean {
+    this.logger.log(`channel.delete: ${JSON.stringify(data)}`);
+    this.chatService.channelDeleteOne(data);
+    return true;
+  }
+
   @MessagePattern('channel.join')
-  OnChannelJoin(@Payload() data: JoinChannelDto): boolean {
+  OnChannelJoin(@Payload() data: UserChannelDto): boolean {
     this.logger.log(`channel.join: ${JSON.stringify(data)}`);
     this.chatService.channelJoinOne(data);
     return true;
   }
 
+  @MessagePattern('channel.leave')
+  OnChannelLeave(@Payload() data: UserChannelDto): boolean {
+    this.logger.log(`channel.leave: ${JSON.stringify(data)}`);
+    this.chatService.channelLeaveOne(data);
+    return true;
+  }
+
   @MessagePattern('room.join')
-  OnRoomJoin(@Payload() data: JoinChannelDto): boolean {
+  OnRoomJoin(@Payload() data: UserChannelDto): boolean {
     this.logger.log(`room.join: ${JSON.stringify(data)}`);
     this.chatService.roomJoinOne(data);
     return true;
   }
 
+  @MessagePattern('message.get')
+  OnMessageGet(@Payload() data: UserChannelDto): IChannelMessages[] {
+    this.logger.log(`message.get: ${JSON.stringify(data)}`);
+    return this.chatService.messageGetAll(data);
+  }
+
   @MessagePattern('message.create')
-  OnMessageCreate(@Payload() data: IMessage): boolean {
+  OnMessageCreate(@Payload() data: CreateMessageDto): boolean {
     this.logger.log(`message.create: ${JSON.stringify(data)}`);
-    this.chatService.createMessage(data);
+    this.chatService.messageCreate(data);
     return true;
   }
 }

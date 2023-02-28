@@ -1,5 +1,5 @@
-import { Logger } from '@nestjs/common';
-import { Payload } from '@nestjs/microservices';
+import {Logger} from '@nestjs/common';
+import {Payload} from '@nestjs/microservices';
 import {
   ConnectedSocket,
   OnGatewayConnection,
@@ -8,12 +8,12 @@ import {
   WebSocketGateway,
   WebSocketServer,
 } from '@nestjs/websockets';
-import { Socket } from 'socket.io';
-import { Server } from 'socket.io';
-import { ChatService } from './chat.service';
-import { IUserMessage } from './interfaces/IUserMessage';
+import {Socket} from 'socket.io';
+import {Server} from 'socket.io';
+import {ChatService} from './chat.service';
+import {IUserMessage} from './interfaces/IUserMessage';
 
-@WebSocketGateway({ path: '/chat', serveClient: false, cors: { origin: '*' } })
+@WebSocketGateway({path: '/chat', serveClient: false, cors: {origin: '*'}})
 export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   private readonly logger = new Logger(ChatGateway.name);
   constructor(private readonly chatService: ChatService) {}
@@ -21,7 +21,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   server: Server;
 
   @SubscribeMessage('room.join')
-  OnChannelCreate(@Payload() data: any, @ConnectedSocket() client: Socket) {
+  OnRoomJoin(@Payload() data: any, @ConnectedSocket() client: Socket) {
     const id = client?.handshake?.auth?.token;
     if (client.rooms.has(data)) return;
     if (id && data && typeof data == 'string') {
@@ -31,8 +31,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       this.chatService
         .joinRoom(id, data)
         .then((_) => {
-          client.join(data);
-          client.to('id').emit('room.join', {
+          client.to(data).emit('room.join', {
             statusCode: 200,
             user_id: id,
             channel_id: data,
@@ -42,13 +41,26 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
             user_id: id,
             channel_id: data,
           });
+          client.join(data);
         })
         .catch((err) => client.emit('room.join', err));
     }
   }
 
+  @SubscribeMessage('room.leave')
+  OnRoomLeave(@Payload() data: any, @ConnectedSocket() client: Socket) {
+    const id = client?.handshake?.auth?.token;
+    if (client.rooms.has(data)) {
+        this.logger.log(
+          `room.leave: ${client.id}, user_id: ${id}, channel_id: ${data}`,
+        );
+      client.leave(data);
+      client.to(data).emit('room.leave', {statusCode: 200, user_id: id, channel_id: data})
+    }
+  }
+
   @SubscribeMessage('message.create')
-  OnMessage(@Payload() data: IUserMessage, @ConnectedSocket() client: Socket) {
+  OnMessage(@Payload() data: any, @ConnectedSocket() client: Socket) {
     const id = client?.handshake?.auth?.token;
     this.chatService
       .createMessage({
@@ -83,6 +95,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   handleDisconnect(client: Socket) {
     this.logger.log(`disconnect: ${client.id}`);
+    client.rooms.forEach((elem) => client.leave(elem));
   }
 }
 

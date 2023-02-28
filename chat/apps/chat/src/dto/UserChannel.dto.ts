@@ -1,4 +1,4 @@
-export class JoinChannelDto {
+export class UserChannelDto {
   user_id: string;
   channel_id: string;
 }

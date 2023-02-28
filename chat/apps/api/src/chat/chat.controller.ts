@@ -9,9 +9,9 @@ import {
   Post,
   Res,
 } from '@nestjs/common';
-import { ChatService } from './chat.service';
-import { CreateChannelDto } from './dto/CreateChannel.dto';
-import { Response } from 'express';
+import {ChatService} from './chat.service';
+import {CreateChannelDto} from './dto/CreateChannel.dto';
+import {Response} from 'express';
 
 @Controller('/')
 export class ChatController {
@@ -55,11 +55,11 @@ export class ChatController {
     @Body() body: CreateChannelDto,
     @Res() res: Response,
   ) {
-    this.logger.log(`POST '/channels/' from ${jwt}: chat_name => ${body.name}`);
+    this.logger.log(`POST '/channels/' from ${jwt}: channel_id => ${body.name}`);
     this.chatService
       .createChannel(jwt.split(' ')[1], body.name)
       .then((value) => {
-        res.json({ channel_id: value }).send();
+        res.json({channel_id: value}).send();
       })
       .catch((e) => {
         if (!e.statusCode) res.status(500).send();
@@ -68,8 +68,54 @@ export class ChatController {
   }
 
   /**
+   * @Brief User $jwt deletes an owned channel
+   * @param jwt authorization token
+   * @param channel_id channel unique identifier
+   * @return 200
+   */
+  @Delete('/channels/:channel_id/')
+  deleteChannel(
+    @Headers('authorization') jwt,
+    @Param('channel_id') channel_id: string,
+    @Res() res: Response,
+  ) {
+    this.logger.log(
+      `DELETE '/channels/:channel_id/' from ${jwt}: channel_id => ${channel_id}`,
+    );
+    this.chatService
+      .deleteChannel(jwt.split(' ')[1], channel_id)
+      .then((_) => res.json().send)
+      .catch((e) => {
+        if (!e.statusCode) res.status(500).send();
+        else res.status(e.statusCode).json(e.message).send();
+      });
+  }
+
+  /**
+   * @Brief User $jwt retrieves all messages from an existng channel
+   * @param jwt authorization token
+   * @return 200 
+   **/
+  @Get('/channels/:channel_id/')
+  getChannelMessages(
+    @Headers('authorization') jwt,
+    @Param('channel_id') channel_id: string,
+    @Res() res: Response,
+  ) {
+    this.logger.log(
+      `GET '/channels/:channel_id/' from ${jwt}: channel_id => ${channel_id}`,
+    );
+    this.chatService
+      .getMessages(jwt.split(' ')[1], channel_id)
+      .then((value) => res.json(value).send)
+      .catch((e) => {
+        if (!e.statusCode) res.status(500).send();
+        else res.status(e.statusCode).json(e.message).send();
+      });
+  }
+  /**
    *
-   * @Brief User $jwt joins an existing channel with the provided name
+   * @Brief User $jwt joins an existing channel
    * @param jwt authorization token
    * @return 201 - channel_id
    */
@@ -80,9 +126,9 @@ export class ChatController {
     @Res() res: Response,
   ) {
     this.logger.log(
-      `POST '/channels/:channel_id/join' from ${jwt}: chat_name => ${channel_id}`,
+      `POST '/channels/:channel_id/join' from ${jwt}: channel_id => ${channel_id}`,
     );
-    return this.chatService
+    this.chatService
       .joinChannel(jwt.split(' ')[1], channel_id)
       .then((_) => res.json().send)
       .catch((e) => {
@@ -98,9 +144,16 @@ export class ChatController {
    * @return 200
    */
   @Delete('/channels/:channel_id/join')
-  leaveChannel(@Headers('authorization') jwt, @Param('channel_id') channel_id) {
+  leaveChannel(@Headers('authorization') jwt, @Param('channel_id') channel_id, @Res() res: Response) {
     this.logger.log(
       `DELETE '/channels/:channel_id/join' from ${jwt}: channel_id => ${channel_id}`,
     );
+    this.chatService
+      .leaveChannel(jwt.split(' ')[1], channel_id)
+      .then((_) => res.json().send)
+      .catch((e) => {
+        if (!e.statusCode) res.status(500).send();
+        else res.status(e.statusCode).json(e.message).send();
+      });
   }
 }
