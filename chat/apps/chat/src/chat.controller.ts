@@ -1,10 +1,10 @@
-import {Controller, Logger} from '@nestjs/common';
-import {MessagePattern, Payload} from '@nestjs/microservices';
-import {ChatService} from './chat.service';
-import {CreateChannelDto} from './dto/CreateChannel.dto';
-import {CreateMessageDto} from './dto/CreateMessage.dto';
-import {UserChannelDto} from './dto/UserChannel.dto';
-import {IChannel, IMessage} from './interfaces/chat.interfaces';
+import { Controller, Logger } from '@nestjs/common';
+import { MessagePattern, Payload } from '@nestjs/microservices';
+import { ChatService } from './chat.service';
+import { CreateChannelDto } from './dto/CreateChannel.dto';
+import { CreateMessageDto } from './dto/CreateMessage.dto';
+import { UserChannelDto } from './dto/UserChannel.dto';
+import { IChannel } from './interfaces/chat.interfaces';
 import { ISimplifiedMessage } from './interfaces/IChannelMessages';
 
 @Controller()

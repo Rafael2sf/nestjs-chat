@@ -1,12 +1,12 @@
-import { ChatGateway } from './chat.gateway';
+import { ChatClientGateway } from './chat-client.gateway';
 import {
   ClientProviderOptions,
   ClientsModule,
   Transport,
 } from '@nestjs/microservices';
 import { Module } from '@nestjs/common';
-import { ChatService } from './chat.service';
-import { ChatController } from './chat.controller';
+import { ChatClientService } from './chat-client.service';
+import { ChatClientController } from './chat-client.controller';
 
 const ChatClientOptions: ClientProviderOptions = {
   name: 'CHAT_SERVICE',
@@ -18,7 +18,7 @@ const ChatClientOptions: ClientProviderOptions = {
 
 @Module({
   imports: [ClientsModule.register([ChatClientOptions])],
-  controllers: [ChatController],
-  providers: [ChatGateway, ChatService],
+  controllers: [ChatClientController],
+  providers: [ChatClientGateway, ChatClientService],
 })
-export class ChatModule {}
+export class ChatClientModule {}

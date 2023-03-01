@@ -4,6 +4,6 @@ export interface ISimplifiedMessage {
 }
 
 // export interface IChannelMessages {
-  // channel_id: string;
-  // messages: ISimplifiedMessage[];
+// channel_id: string;
+// messages: ISimplifiedMessage[];
 // }

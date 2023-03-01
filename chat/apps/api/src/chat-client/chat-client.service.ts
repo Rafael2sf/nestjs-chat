@@ -1,12 +1,12 @@
-import {Inject, Injectable} from '@nestjs/common';
-import {ClientProxy} from '@nestjs/microservices';
-import {firstValueFrom} from 'rxjs';
-import {IChannel} from './interfaces/IChannel';
-import {ISimplifiedMessage} from './interfaces/IChannelMessages';
-import {IUserMessage} from './interfaces/IUserMessage';
+import { Inject, Injectable } from '@nestjs/common';
+import { ClientProxy } from '@nestjs/microservices';
+import { firstValueFrom } from 'rxjs';
+import { IChannel } from './interfaces/IChannel';
+import { ISimplifiedMessage } from './interfaces/IChannelMessages';
+import { IUserMessage } from './interfaces/IUserMessage';
 
 @Injectable()
-export class ChatService {
+export class ChatClientService {
   constructor(
     @Inject('CHAT_SERVICE') private readonly chatService: ClientProxy,
   ) {}
@@ -52,7 +52,6 @@ export class ChatService {
     );
   }
 
-
   // Rooms
   joinRoom(user_id: string, channel_id: string): Promise<boolean> {
     return firstValueFrom(
@@ -64,12 +63,14 @@ export class ChatService {
   }
 
   // Messages
-  getMessages(user_id: string, channel_id: string): Promise<ISimplifiedMessage[]>
-  {
+  getMessages(
+    user_id: string,
+    channel_id: string,
+  ): Promise<ISimplifiedMessage[]> {
     return firstValueFrom(
       this.chatService.send<ISimplifiedMessage[]>('message.get', {
         user_id,
-        channel_id
+        channel_id,
       }),
     );
   }

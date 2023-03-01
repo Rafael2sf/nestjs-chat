@@ -4,6 +4,6 @@ export class ISimplifiedMessage {
 }
 
 // export class IChannelMessages {
-  // channel_id: string;
-  // messages: ISimplifiedMessage[];
+// channel_id: string;
+// messages: ISimplifiedMessage[];
 // }

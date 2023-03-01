@@ -1,5 +1,5 @@
-import {Logger} from '@nestjs/common';
-import {Payload} from '@nestjs/microservices';
+import { Logger } from '@nestjs/common';
+import { Payload } from '@nestjs/microservices';
 import {
   ConnectedSocket,
   OnGatewayConnection,
@@ -8,15 +8,16 @@ import {
   WebSocketGateway,
   WebSocketServer,
 } from '@nestjs/websockets';
-import {Socket} from 'socket.io';
-import {Server} from 'socket.io';
-import {ChatService} from './chat.service';
-import {IUserMessage} from './interfaces/IUserMessage';
+import { Socket } from 'socket.io';
+import { Server } from 'socket.io';
+import { ChatClientService } from './chat-client.service';
 
-@WebSocketGateway({path: '/chat', serveClient: false, cors: {origin: '*'}})
-export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
-  private readonly logger = new Logger(ChatGateway.name);
-  constructor(private readonly chatService: ChatService) {}
+@WebSocketGateway({ path: '/chat', serveClient: false, cors: { origin: '*' } })
+export class ChatClientGateway
+  implements OnGatewayConnection, OnGatewayDisconnect
+{
+  private readonly logger = new Logger(ChatClientGateway.name);
+  constructor(private readonly chatService: ChatClientService) {}
   @WebSocketServer()
   server: Server;
 
@@ -55,7 +56,9 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         `room.leave: ${client.id}, user_id: ${id}, channel_id: ${data}`,
       );
       client.leave(data);
-      client.to(data).emit('room.leave', {statusCode: 200, user_id: id, channel_id: data})
+      client
+        .to(data)
+        .emit('room.leave', { statusCode: 200, user_id: id, channel_id: data });
     }
   }
 

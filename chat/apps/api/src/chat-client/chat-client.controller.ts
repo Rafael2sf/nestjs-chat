@@ -9,14 +9,14 @@ import {
   Post,
   Res,
 } from '@nestjs/common';
-import {ChatService} from './chat.service';
-import {CreateChannelDto} from './dto/CreateChannel.dto';
-import {Response} from 'express';
+import { ChatClientService } from './chat-client.service';
+import { CreateChannelDto } from './dto/CreateChannel.dto';
+import { Response } from 'express';
 
 @Controller('/')
-export class ChatController {
-  constructor(private readonly chatService: ChatService) {}
-  private readonly logger = new Logger(ChatController.name);
+export class ChatClientController {
+  constructor(private readonly chatService: ChatClientService) {}
+  private readonly logger = new Logger(ChatClientController.name);
 
   /**
    * @TODO validate jwt -> get user ->
@@ -55,11 +55,13 @@ export class ChatController {
     @Body() body: CreateChannelDto,
     @Res() res: Response,
   ) {
-    this.logger.log(`POST '/channels/' from ${jwt}: channel_id => ${body.name}`);
+    this.logger.log(
+      `POST '/channels/' from ${jwt}: channel_id => ${body.name}`,
+    );
     this.chatService
       .createChannel(jwt.split(' ')[1], body.name)
       .then((value) => {
-        res.json({channel_id: value}).send();
+        res.json({ channel_id: value }).send();
       })
       .catch((e) => {
         if (!e.statusCode) res.status(500).send();
@@ -84,7 +86,7 @@ export class ChatController {
     );
     this.chatService
       .deleteChannel(jwt.split(' ')[1], channel_id)
-      .then((_) => res.json().send)
+      .then(() => res.json().send)
       .catch((e) => {
         if (!e.statusCode) res.status(500).send();
         else res.status(e.statusCode).json(e.message).send();
@@ -94,7 +96,7 @@ export class ChatController {
   /**
    * @Brief User $jwt retrieves all messages from an existng channel
    * @param jwt authorization token
-   * @return 200 
+   * @return 200
    **/
   @Get('/channels/:channel_id/')
   getChannelMessages(
@@ -130,7 +132,7 @@ export class ChatController {
     );
     this.chatService
       .joinChannel(jwt.split(' ')[1], channel_id)
-      .then((_) => res.json().send)
+      .then(() => res.json().send)
       .catch((e) => {
         if (!e.statusCode) res.status(500).send();
         else res.status(e.statusCode).json(e.message).send();
@@ -144,13 +146,17 @@ export class ChatController {
    * @return 200
    */
   @Delete('/channels/:channel_id/join')
-  leaveChannel(@Headers('authorization') jwt, @Param('channel_id') channel_id, @Res() res: Response) {
+  leaveChannel(
+    @Headers('authorization') jwt,
+    @Param('channel_id') channel_id,
+    @Res() res: Response,
+  ) {
     this.logger.log(
       `DELETE '/channels/:channel_id/join' from ${jwt}: channel_id => ${channel_id}`,
     );
     this.chatService
       .leaveChannel(jwt.split(' ')[1], channel_id)
-      .then((_) => res.json().send)
+      .then(() => res.json().send)
       .catch((e) => {
         if (!e.statusCode) res.status(500).send();
         else res.status(e.statusCode).json(e.message).send();
