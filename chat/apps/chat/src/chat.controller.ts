@@ -1,5 +1,5 @@
 import { Controller, Logger } from '@nestjs/common';
-import { MessagePattern, Payload } from '@nestjs/microservices';
+import { EventPattern, MessagePattern, Payload } from '@nestjs/microservices';
 import { ChatService } from './chat.service';
 import { CreateChannelDto } from './dto/CreateChannel.dto';
 import { CreateMessageDto } from './dto/CreateMessage.dto';
@@ -40,8 +40,7 @@ export class ChatController {
   @MessagePattern('channel.leave')
   OnChannelLeave(@Payload() data: UserChannelDto): boolean {
     this.logger.log(`channel.leave: ${JSON.stringify(data)}`);
-    this.chatService.channelLeaveOne(data);
-    return true;
+    return this.chatService.channelLeaveOne(data);
   }
 
   @MessagePattern('room.join')
@@ -57,7 +56,7 @@ export class ChatController {
     return this.chatService.messageGetAll(data);
   }
 
-  @MessagePattern('message.create')
+  @EventPattern('message.create')
   OnMessageCreate(@Payload() data: CreateMessageDto): boolean {
     this.logger.log(`message.create: ${JSON.stringify(data)}`);
     this.chatService.messageCreate(data);

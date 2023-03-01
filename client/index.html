@@ -95,9 +95,21 @@
 			e.preventDefault();
 			socket = io("ws://localhost:3000", { path: '/chat', auth: { token: document.getElementById('register_input').value } });
 			
+      // Send
+
+      message_input.addEventListener('focusin', (e) => {
+        e.preventDefault();
+			  socket.emit('message.writing', message_room.value);
+      })
+      
+      message_input.addEventListener('focusout', (e) => {
+        e.preventDefault();
+			  socket.emit('message.notwriting', message_room.value);
+      })
+
 			join_room_btn.addEventListener('click', (e) => {
 				e.preventDefault();
-			socket.emit('room.join', join_room_input.value);
+			  socket.emit('room.join', join_room_input.value);
 			})
 	
       leave_room_btn.addEventListener('click', (e) => {
@@ -112,28 +124,37 @@
 				message_input.value = '';
 			});
 
+
+      // listen
+			socket.on('message.writing', function (msg) {
+				  console.log('message.writing', msg);
+			});
+
+			socket.on('message.notwriting', function (msg) {
+				  console.log('message.notwriting', msg);
+			});
+
 			socket.on('room.join', function (msg) {
         if (msg.statusCode === 200)
         {
-				  msg.data = '@ joined channel @'
+				  msg.data = '@ joined room @'
 				  console.log(msg);
 				  append_message(msg);
         }
+        // handle join failed 
 			});
 			
 			socket.on('room.leave', function (msg) {
-        if (msg.statusCode === 200)
-        {
-				  msg.data = '@ left channel @'
+				  msg.data = '@ left room @'
 				  console.log(msg);
 				  append_message(msg);
-        }
 			});
 			
 			socket.on('message.create', function (msg) {
 				console.log(msg);
         if (msg.statusCode === 200)
 				  append_message(msg);
+        // handle message sent failed
 			});
 		})
 

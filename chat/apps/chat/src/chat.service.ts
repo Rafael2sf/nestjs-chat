@@ -13,6 +13,7 @@ export class ChatService {
   private messages: IMessage[] = [];
   private chat_user: IChannelUser[] = [];
 
+  // Error case: When channel is destroyed room is kept
   // Channels
 
   channelGetAll(): IChannel[] {
@@ -28,16 +29,13 @@ export class ChatService {
 
   channelDeleteOne(data: UserChannelDto) {
     const filered_channels = this.channels.filter(
-      (elem) =>
-        elem.owner !== data.user_id ||
-        (elem.owner === data.user_id && elem.id !== data.channel_id),
+      (elem) => elem.owner !== data.user_id || elem.id !== data.channel_id,
     );
     if (filered_channels.length === this.channels.length)
       throw new RpcException({
         statusCode: 403,
         message: 'Not enough permissions to delete this channel',
       });
-    console.log(filered_channels);
     this.channels = filered_channels;
   }
 
@@ -50,19 +48,22 @@ export class ChatService {
       });
     }
     if (
+      channel.owner === data.user_id ||
       this.chat_user.find(
         (elem) =>
           elem.user_id === data.user_id && elem.channel_id === data.channel_id,
       )
-    )
+    ) {
       throw new RpcException({
         statusCode: 400,
         message: 'Already joined this channel',
       });
+    }
     this.chat_user.push(data);
   }
 
-  channelLeaveOne(data: UserChannelDto) {
+  // returns true either the user is the owner of channel or not
+  channelLeaveOne(data: UserChannelDto): boolean {
     const channel = this.channels.find((elem) => elem.id === data.channel_id);
     if (!channel)
       throw new RpcException({
@@ -77,10 +78,11 @@ export class ChatService {
       this.chat_user = this.chat_user.filter(
         (elem) => elem.channel_id !== data.channel_id,
       );
+      return true;
     } else {
       const filtered_chat_user = this.chat_user.filter(
         (elem) =>
-          elem.user_id !== data.user_id && elem.channel_id !== data.channel_id,
+          elem.user_id !== data.user_id || elem.channel_id !== data.channel_id,
       );
       if (filtered_chat_user.length === this.chat_user.length)
         throw new RpcException({
@@ -88,6 +90,7 @@ export class ChatService {
           message: 'Not a member of this channel',
         });
       this.chat_user = filtered_chat_user;
+      return false;
     }
   }
 
@@ -109,10 +112,7 @@ export class ChatService {
 
   // Messages
   messageGetAll(data: UserChannelDto): ISimplifiedMessage[] {
-    const chat_user = this.chat_user.find(
-      (elem) => elem.channel_id === data.channel_id,
-    );
-    if (!chat_user) {
+    if (this.chat_user.find((elem) => elem.channel_id === data.channel_id)) {
       throw new RpcException({
         statusCode: 403,
         message: 'Not a member of this channel',
@@ -126,16 +126,6 @@ export class ChatService {
   }
 
   messageCreate(data: CreateMessageDto) {
-    const chat_user = this.chat_user.find(
-      (elem) =>
-        elem.channel_id === data.channel_id && elem.user_id === elem.user_id,
-    );
-    if (!chat_user) {
-      throw new RpcException({
-        statusCode: 403,
-        message: 'Not a member of this channel',
-      });
-    }
     this.messages.push(data);
   }
 }

@@ -12,10 +12,14 @@ import {
 import { ChatClientService } from './chat-client.service';
 import { CreateChannelDto } from './dto/CreateChannel.dto';
 import { Response } from 'express';
+import { ChatClientGateway } from './chat-client.gateway';
 
 @Controller('/')
 export class ChatClientController {
-  constructor(private readonly chatService: ChatClientService) {}
+  constructor(
+    private readonly chatService: ChatClientService,
+    private readonly chatGateway: ChatClientGateway,
+  ) {}
   private readonly logger = new Logger(ChatClientController.name);
 
   /**
@@ -115,6 +119,7 @@ export class ChatClientController {
         else res.status(e.statusCode).json(e.message).send();
       });
   }
+
   /**
    *
    * @Brief User $jwt joins an existing channel
@@ -156,7 +161,11 @@ export class ChatClientController {
     );
     this.chatService
       .leaveChannel(jwt.split(' ')[1], channel_id)
-      .then(() => res.json().send)
+      .then((is_owner) => {
+        if (is_owner) this.chatGateway.forceRoomDestroy(channel_id)
+        else this.chatGateway.forceRoomLeave(jwt.split(' ')[1], channel_id);
+        res.json().send();
+      })
       .catch((e) => {
         if (!e.statusCode) res.status(500).send();
         else res.status(e.statusCode).json(e.message).send();

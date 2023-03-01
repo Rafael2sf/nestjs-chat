@@ -75,9 +75,7 @@ export class ChatClientService {
     );
   }
 
-  createMessage(message: IUserMessage): Promise<boolean> {
-    return firstValueFrom(
-      this.chatService.send<boolean>('message.create', message),
-    );
+  createMessage(message: IUserMessage) {
+    this.chatService.emit('message.create', message);
   }
 }
