@@ -93,7 +93,9 @@
 
 		register_form.addEventListener('submit', function (e) {
 			e.preventDefault();
-			socket = io("ws://localhost:3000", { path: '/chat', auth: { token: document.getElementById('register_input').value } });
+			socket = io("ws://localhost:3000", { path: '/chat',
+        query: "autojoin=true", // receive messages on connection
+        auth: { token: document.getElementById('register_input').value } });
 			
       // Send
 

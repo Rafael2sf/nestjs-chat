@@ -1,11 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { RpcException } from '@nestjs/microservices';
 import { randomUUID } from 'crypto';
+import {Observable, of, tap} from 'rxjs';
 import { CreateChannelDto } from './dto/CreateChannel.dto';
 import { CreateMessageDto } from './dto/CreateMessage.dto';
 import { UserChannelDto } from './dto/UserChannel.dto';
 import { IChannel, IMessage, IChannelUser } from './interfaces/chat.interfaces';
-import { ISimplifiedMessage } from './interfaces/IChannelMessages';
 
 @Injectable()
 export class ChatService {
@@ -110,19 +110,44 @@ export class ChatService {
     }
   }
 
+  roomJoinMany(data: string): Observable<IChannel> {
+    const filtered_chat_user = this.chat_user.filter(
+      (elem) => elem.user_id === data);
+    const filtered_channels = this.channels.filter(
+      (elem) => filtered_chat_user.find((x) => elem.id === x.channel_id)
+    );
+    if (!filtered_channels) {
+      throw new RpcException({
+        statusCode: 400,
+        message: 'No channels',
+      });
+    }
+    return new Observable((subscriber) => {
+      filtered_channels.map((elem) => subscriber.next(elem));
+      subscriber.complete();
+    });
+    // const ret = of(filtered_channels);
+    // ret.subscribe({
+    //   next: (v) => console.log(v),
+    //   error: (e) => console.error(e),
+    //   complete: () => console.info('complete'),
+    // })
+    // return ret;
+  }
+
   // Messages
-  messageGetAll(data: UserChannelDto): ISimplifiedMessage[] {
-    if (this.chat_user.find((elem) => elem.channel_id === data.channel_id)) {
+  messageGetAll(data: UserChannelDto): IMessage[] {
+    if (!this.chat_user.find((elem) => elem.channel_id === data.channel_id
+      && elem.user_id === data.user_id)) {
       throw new RpcException({
         statusCode: 403,
         message: 'Not a member of this channel',
       });
     }
-    const messages: IMessage[] = this.messages.filter(
+    const filtered_messages: IMessage[] = this.messages.filter(
       (elem) => elem.channel_id === data.channel_id,
     );
-    messages.map((elem) => delete elem.channel_id);
-    return messages;
+    return filtered_messages;
   }
 
   messageCreate(data: CreateMessageDto) {

@@ -1,10 +1,11 @@
 import { Controller, Logger } from '@nestjs/common';
 import { EventPattern, MessagePattern, Payload } from '@nestjs/microservices';
+import {Observable} from 'rxjs';
 import { ChatService } from './chat.service';
 import { CreateChannelDto } from './dto/CreateChannel.dto';
 import { CreateMessageDto } from './dto/CreateMessage.dto';
 import { UserChannelDto } from './dto/UserChannel.dto';
-import { IChannel } from './interfaces/chat.interfaces';
+import { IChannel, IMessage } from './interfaces/chat.interfaces';
 import { ISimplifiedMessage } from './interfaces/IChannelMessages';
 
 @Controller()
@@ -44,14 +45,18 @@ export class ChatController {
   }
 
   @MessagePattern('room.join')
-  OnRoomJoin(@Payload() data: UserChannelDto): boolean {
+  OnRoomJoin(@Payload() data: UserChannelDto): boolean | Observable<IChannel> {
     this.logger.log(`room.join: ${JSON.stringify(data)}`);
-    this.chatService.roomJoinOne(data);
-    return true;
+    if (typeof data === 'string') {
+      return this.chatService.roomJoinMany(data);
+    } else {
+      this.chatService.roomJoinOne(data);
+      return true;
+    }
   }
 
   @MessagePattern('message.get')
-  OnMessageGet(@Payload() data: UserChannelDto): ISimplifiedMessage[] {
+  OnMessageGet(@Payload() data: UserChannelDto): IMessage[] {
     this.logger.log(`message.get: ${JSON.stringify(data)}`);
     return this.chatService.messageGetAll(data);
   }

@@ -1,9 +1,9 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
-import { firstValueFrom } from 'rxjs';
+import { firstValueFrom, lastValueFrom, Observable, takeUntil } from 'rxjs';
 import { IChannel } from './interfaces/IChannel';
 import { ISimplifiedMessage } from './interfaces/IChannelMessages';
-import { IUserMessage } from './interfaces/IUserMessage';
+import { IMessage } from './interfaces/IUserMessage';
 
 @Injectable()
 export class ChatClientService {
@@ -62,20 +62,30 @@ export class ChatClientService {
     );
   }
 
+  joinAllRooms(user_id: string): Observable<IChannel> {
+    try {
+      return this.chatService.send<IChannel>('room.join', user_id);
+    } catch (e) {
+      console.log('gotcha', e);
+    }
+  }
+
   // Messages
-  getMessages(
+  async getMessages(
     user_id: string,
     channel_id: string,
   ): Promise<ISimplifiedMessage[]> {
-    return firstValueFrom(
-      this.chatService.send<ISimplifiedMessage[]>('message.get', {
+    const messages = await firstValueFrom(
+      this.chatService.send<IMessage[]>('message.get', {
         user_id,
         channel_id,
       }),
     );
+    messages.filter((elem) => delete elem.channel_id);
+    return messages;
   }
 
-  createMessage(message: IUserMessage) {
+  createMessage(message: IMessage) {
     this.chatService.emit('message.create', message);
   }
 }
