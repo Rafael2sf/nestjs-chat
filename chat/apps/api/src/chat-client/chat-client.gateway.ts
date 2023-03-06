@@ -55,16 +55,16 @@ export class ChatClientGateway
       );
       this.chatService
         .joinRoom(id, data)
-        .then(() => {
+        .then((channel) => {
           client.to(data).emit('room.join', {
             statusCode: 200,
             user_id: id,
-            channel_id: data,
+            id: channel.id,
           });
           client.emit('room.join', {
             statusCode: 200,
             user_id: id,
-            channel_id: data,
+            ...channel,
           });
           client.join(data);
         })
@@ -82,7 +82,7 @@ export class ChatClientGateway
       client.leave(data);
       client
         .to(data)
-        .emit('room.leave', { statusCode: 200, user_id: id, channel_id: data });
+        .emit('room.leave', { statusCode: 200, user_id: id, id: data });
     }
   }
 
@@ -112,26 +112,33 @@ export class ChatClientGateway
   }
 
   @SubscribeMessage('message.create')
-  OnMessageCreate(@Payload() data: any, @ConnectedSocket() client: Socket) {
+  async OnMessageCreate(@Payload() data: any, @ConnectedSocket() client: Socket) {
     const id = client?.handshake?.auth?.token;
     if (client.rooms.has(data.channel_id)) {
-      this.chatService.createMessage({
-        user_id: id,
-        channel_id: data.channel_id,
-        data: data.data,
-      });
-      client.to(data.channel_id).emit('message.create', {
-        statusCode: 200,
-        user_id: id,
-        channel_id: data.channel_id,
-        data: data.data,
-      });
-      client.emit('message.create', {
-        statusCode: 200,
-        user_id: id,
-        channel_id: data.channel_id,
-        data: data.data,
-      });
+      try {
+        const message_id = await this.chatService.createMessage({
+          id: undefined,
+          user_id: id,
+          channel_id: data.channel_id,
+          data: data.data,
+        });
+        client.to(data.channel_id).emit('message.create', {
+          statusCode: 200,
+          user_id: id,
+          channel_id: data.channel_id,
+          id: message_id,
+          data: data.data,
+        });
+        client.emit('message.create', {
+          statusCode: 200,
+          user_id: id,
+          channel_id: data.channel_id,
+          id: message_id,
+          data: data.data,
+        });
+      } catch (e) {
+        client.emit('message.create', e);
+      }
     } else {
       client.emit('message.create', {
         statusCode: 400,
@@ -145,17 +152,17 @@ export class ChatClientGateway
     const query = client.handshake.query;
     if (query.autojoin === 'true') {
       this.chatService.joinAllRooms(id).subscribe({
-        next: (data: IChannel) => {
-          client.join(data.id);
-          client.to(data.id).emit('room.join', {
+        next: (channel: IChannel) => {
+          client.join(channel.id);
+          client.to(channel.id).emit('room.join', {
             statusCode: 200,
             user_id: id,
-            channel_id: data,
+            id: channel.id,
           });
           client.emit('room.join', {
             statusCode: 200,
             user_id: id,
-            channel_id: data.id,
+            ...channel,
           });
         },
         error: (err) => {console.log(err)},

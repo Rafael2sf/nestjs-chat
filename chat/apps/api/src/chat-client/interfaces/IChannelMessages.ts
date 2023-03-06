@@ -1,4 +1,5 @@
 export interface ISimplifiedMessage {
+  id: string;
   user_id: string;
   data: string;
 }

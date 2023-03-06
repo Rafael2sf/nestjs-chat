@@ -1,6 +1,8 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import { firstValueFrom, lastValueFrom, Observable, takeUntil } from 'rxjs';
+import {CreateMuteDto} from './dto/CreateMute.dto';
+import {GetMessagesDto} from './dto/GetMessagesDto';
 import { IChannel } from './interfaces/IChannel';
 import { ISimplifiedMessage } from './interfaces/IChannelMessages';
 import { IMessage } from './interfaces/IUserMessage';
@@ -53,9 +55,9 @@ export class ChatClientService {
   }
 
   // Rooms
-  joinRoom(user_id: string, channel_id: string): Promise<boolean> {
+  joinRoom(user_id: string, channel_id: string): Promise<IChannel> {
     return firstValueFrom(
-      this.chatService.send<boolean>('room.join', {
+      this.chatService.send<IChannel>('room.join', {
         user_id,
         channel_id,
       }),
@@ -66,26 +68,31 @@ export class ChatClientService {
     try {
       return this.chatService.send<IChannel>('room.join', user_id);
     } catch (e) {
-      console.log('gotcha', e);
+      console.log('join all rooms catch', e);
     }
   }
 
   // Messages
-  async getMessages(
-    user_id: string,
-    channel_id: string,
-  ): Promise<ISimplifiedMessage[]> {
+  async getMessages(data: GetMessagesDto): Promise<ISimplifiedMessage[]> {
     const messages = await firstValueFrom(
-      this.chatService.send<IMessage[]>('message.get', {
-        user_id,
-        channel_id,
-      }),
+      this.chatService.send<IMessage[]>('message.get', data),
     );
     messages.filter((elem) => delete elem.channel_id);
     return messages;
   }
 
-  createMessage(message: IMessage) {
-    this.chatService.emit('message.create', message);
+  createMessage(message: IMessage): Promise<string> {
+    return firstValueFrom(this.chatService.send<string>('message.create', message));
+  }
+
+  // mute
+  muteUser(user: string, data: CreateMuteDto): Promise<boolean> {
+    console.log(data.timestamp);
+    return firstValueFrom(this.chatService.send<boolean>('channel.mute', data));
+  }
+
+  unmuteUser(user: string, data: CreateMuteDto): Promise<boolean> {
+    return firstValueFrom(
+      this.chatService.send<boolean>('channel.unmute', data));
   }
 }

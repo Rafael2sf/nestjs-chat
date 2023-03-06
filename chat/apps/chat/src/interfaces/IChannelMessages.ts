@@ -1,4 +1,5 @@
 export class ISimplifiedMessage {
+  id: string;
   user_id: string;
   data: string;
 }

@@ -1,19 +1,19 @@
 import { Injectable } from '@nestjs/common';
-import { RpcException } from '@nestjs/microservices';
+import { RmqContext, RpcException } from '@nestjs/microservices';
 import { randomUUID } from 'crypto';
-import {Observable, of, tap} from 'rxjs';
+import { Observable } from 'rxjs';
 import { CreateChannelDto } from './dto/CreateChannel.dto';
 import { CreateMessageDto } from './dto/CreateMessage.dto';
+import {GetMessagesDto} from './dto/GetMessagesDto';
 import { UserChannelDto } from './dto/UserChannel.dto';
-import { IChannel, IMessage, IChannelUser } from './interfaces/chat.interfaces';
+import { IChannel, IMessage, IChannelUser, IMutedUser } from './interfaces/chat.interfaces';
 
 @Injectable()
 export class ChatService {
   private channels: IChannel[] = [];
   private messages: IMessage[] = [];
   private chat_user: IChannelUser[] = [];
-
-  // Error case: When channel is destroyed room is kept
+  private mute_hist: IMutedUser[] = [];
   // Channels
 
   channelGetAll(): IChannel[] {
@@ -96,18 +96,24 @@ export class ChatService {
 
   // Rooms
 
-  roomJoinOne(data: UserChannelDto) {
-    if (
-      !this.chat_user.find(
-        (elem) =>
-          elem.user_id === data.user_id && elem.channel_id === data.channel_id,
-      )
-    ) {
+  roomJoinOne(data: UserChannelDto): IChannel {
+    const channel = this.channels.find((elem) => elem.id === data.channel_id);
+    if (!channel) {
+      throw new RpcException({
+        statusCode: 400,
+        message: 'Invalid channel_id',
+      });
+    }
+    const chat_user = this.chat_user.find((elem) =>
+      elem.user_id === data.user_id && elem.channel_id === data.channel_id,
+    );
+    if (!chat_user) {
       throw new RpcException({
         statusCode: 403,
         message: 'Not a member of this channel',
       });
     }
+    return channel;
   }
 
   roomJoinMany(data: string): Observable<IChannel> {
@@ -136,7 +142,7 @@ export class ChatService {
   }
 
   // Messages
-  messageGetAll(data: UserChannelDto): IMessage[] {
+  messageGetAll(data: GetMessagesDto): IMessage[] {
     if (!this.chat_user.find((elem) => elem.channel_id === data.channel_id
       && elem.user_id === data.user_id)) {
       throw new RpcException({
@@ -147,10 +153,49 @@ export class ChatService {
     const filtered_messages: IMessage[] = this.messages.filter(
       (elem) => elem.channel_id === data.channel_id,
     );
-    return filtered_messages;
+    return filtered_messages.splice(data.offset, data.limit);
   }
 
-  messageCreate(data: CreateMessageDto) {
-    this.messages.push(data);
+  messageCreate(data: CreateMessageDto): string {
+    const is_muted = this.mute_hist.find(
+      (elem) =>
+        elem.user_id === data.user_id && elem.channel_id === data.channel_id);
+    console.log(is_muted?.timestamp, Date.now());
+    if (is_muted && is_muted.timestamp >= Date.now()) {
+      throw new RpcException({ statusCode: 403, message: 'muted'});
+    }
+    const id = randomUUID();
+    this.messages.push({ id, ...data });
+    return id;
+  }
+
+  // mute
+  muteOne(data: IMutedUser) {
+    const is_muted = this.mute_hist.find(
+      (elem) =>
+        elem.user_id === data.user_id && elem.channel_id === data.channel_id);
+    if (is_muted) is_muted.timestamp = Date.now() + data.timestamp * 60_000;
+    else {
+      this.mute_hist.push({
+        user_id: data.user_id,
+        channel_id: data.channel_id,
+        timestamp: Date.now() + data.timestamp * 60_000,
+      });
+    }
+  }
+
+  unmuteOne(data: IMutedUser) {
+    const is_muted = this.mute_hist.find(
+      (elem) =>
+        elem.user_id === data.user_id && elem.channel_id === data.channel_id);
+    if (!is_muted || is_muted.timestamp < Date.now()) {
+      throw new RpcException({
+        statusCode: 400,
+        message: 'Target user is not muted'
+      });
+    }
+    this.mute_hist = this.mute_hist.filter(
+      (elem) =>
+        elem.user_id !== data.user_id || elem.channel_id !== data.channel_id);
   }
 }

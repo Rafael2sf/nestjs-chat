@@ -139,31 +139,29 @@
 			socket.on('room.join', function (msg) {
         if (msg.statusCode === 200)
         {
-				  msg.data = '@ joined room @'
 				  console.log(msg);
-				  append_message(msg);
+				  append_message(msg.user_id, msg.id, "joined the room");
         }
         // handle join failed 
 			});
 			
 			socket.on('room.leave', function (msg) {
-				  msg.data = '@ left room @'
 				  console.log(msg);
-				  append_message(msg);
+				  append_message(msg.user_id, msg.id, "left the room");
 			});
 			
 			socket.on('message.create', function (msg) {
 				console.log(msg);
         if (msg.statusCode === 200)
-				  append_message(msg);
+				  append_message(msg.user_id, msg.channel_id, msg.data);
         // handle message sent failed
 			});
 		})
 
-		function append_message(msg)
+		function append_message(user, name, data)
 		{
 			var item = document.createElement('li');
-			item.textContent = `[${msg.channel_id}] ${msg.user_id}: "${msg.data}"`;
+			item.textContent = `[${name}] ${user}: "${data}"`;
 			messages.appendChild(item);
 		}
 

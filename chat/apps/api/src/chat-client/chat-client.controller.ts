@@ -7,6 +7,7 @@ import {
   Logger,
   Param,
   Post,
+  Query,
   Res,
 } from '@nestjs/common';
 import { ChatClientService } from './chat-client.service';
@@ -106,13 +107,20 @@ export class ChatClientController {
   getChannelMessages(
     @Headers('authorization') jwt,
     @Param('channel_id') channel_id: string,
+    @Query('limit') limit,
+    @Query('offset') offset,
     @Res() res: Response,
   ) {
     this.logger.log(
       `GET '/channels/:channel_id/' from ${jwt}: channel_id => ${channel_id}`,
     );
     this.chatService
-      .getMessages(jwt.split(' ')[1], channel_id)
+      .getMessages({
+        user_id: jwt.split(' ')[1],
+        channel_id,
+        limit: limit ?? 42,
+        offset: offset ?? 0,
+      })
       .then((value) => res.json(value).send)
       .catch((e) => {
         if (!e.statusCode) res.status(500).send();
@@ -162,8 +170,49 @@ export class ChatClientController {
     this.chatService
       .leaveChannel(jwt.split(' ')[1], channel_id)
       .then((is_owner) => {
-        if (is_owner) this.chatGateway.forceRoomDestroy(channel_id)
+        if (is_owner) this.chatGateway.forceRoomDestroy(channel_id);
         else this.chatGateway.forceRoomLeave(jwt.split(' ')[1], channel_id);
+        res.json().send();
+      })
+      .catch((e) => {
+        if (!e.statusCode) res.status(500).send();
+        else res.status(e.statusCode).json(e.message).send();
+      });
+  }
+
+  /* TODO mute / unmute */
+
+  @Post('/channels/:channel_id/mute/:username')
+  muteUser(
+    @Headers('authorization') jwt,
+    @Param('channel_id') channel_id,
+    @Param('username') username,
+    @Query('minutes') timestamp,
+    @Res() res: Response,
+  ) {
+    this.logger.log(`POST /channels/${channel_id}/mute/${username} jwt=${jwt} minutes=${timestamp}`);
+    this.chatService
+      .muteUser(jwt.split(' ')[1], { user_id: username, channel_id, timestamp })
+      .then(() => {
+        res.json().send();
+      })
+      .catch((e) => {
+        if (!e.statusCode) res.status(500).send();
+        else res.status(e.statusCode).json(e.message).send();
+      });
+  }
+
+  @Delete('/channels/:channel_id/mute/:username')
+  unmuteUser(
+    @Headers('authorization') jwt,
+    @Param('channel_id') channel_id,
+    @Param('username') username,
+    @Res() res: Response,
+  ) {
+    this.logger.log(`DELETE /channels/${channel_id}/mute/${username} jwt=${jwt}`);
+    this.chatService
+      .unmuteUser(jwt.split(' ')[1], { user_id: username, channel_id, timestamp: undefined })
+      .then(() => {
         res.json().send();
       })
       .catch((e) => {
