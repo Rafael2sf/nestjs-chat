@@ -1,12 +1,17 @@
 import { Injectable } from '@nestjs/common';
-import { RmqContext, RpcException } from '@nestjs/microservices';
+import { RpcException } from '@nestjs/microservices';
 import { randomUUID } from 'crypto';
 import { Observable } from 'rxjs';
 import { CreateChannelDto } from './dto/CreateChannel.dto';
 import { CreateMessageDto } from './dto/CreateMessage.dto';
-import {GetMessagesDto} from './dto/GetMessagesDto';
+import { GetMessagesDto } from './dto/GetMessagesDto';
 import { UserChannelDto } from './dto/UserChannel.dto';
-import { IChannel, IMessage, IChannelUser, IMutedUser } from './interfaces/chat.interfaces';
+import {
+  IChannel,
+  IMessage,
+  IChannelUser,
+  IMutedUser,
+} from './interfaces/chat.interfaces';
 
 @Injectable()
 export class ChatService {
@@ -104,8 +109,9 @@ export class ChatService {
         message: 'Invalid channel_id',
       });
     }
-    const chat_user = this.chat_user.find((elem) =>
-      elem.user_id === data.user_id && elem.channel_id === data.channel_id,
+    const chat_user = this.chat_user.find(
+      (elem) =>
+        elem.user_id === data.user_id && elem.channel_id === data.channel_id,
     );
     if (!chat_user) {
       throw new RpcException({
@@ -118,9 +124,10 @@ export class ChatService {
 
   roomJoinMany(data: string): Observable<IChannel> {
     const filtered_chat_user = this.chat_user.filter(
-      (elem) => elem.user_id === data);
-    const filtered_channels = this.channels.filter(
-      (elem) => filtered_chat_user.find((x) => elem.id === x.channel_id)
+      (elem) => elem.user_id === data,
+    );
+    const filtered_channels = this.channels.filter((elem) =>
+      filtered_chat_user.find((x) => elem.id === x.channel_id),
     );
     if (!filtered_channels) {
       throw new RpcException({
@@ -132,19 +139,16 @@ export class ChatService {
       filtered_channels.map((elem) => subscriber.next(elem));
       subscriber.complete();
     });
-    // const ret = of(filtered_channels);
-    // ret.subscribe({
-    //   next: (v) => console.log(v),
-    //   error: (e) => console.error(e),
-    //   complete: () => console.info('complete'),
-    // })
-    // return ret;
   }
 
   // Messages
   messageGetAll(data: GetMessagesDto): IMessage[] {
-    if (!this.chat_user.find((elem) => elem.channel_id === data.channel_id
-      && elem.user_id === data.user_id)) {
+    if (
+      !this.chat_user.find(
+        (elem) =>
+          elem.channel_id === data.channel_id && elem.user_id === data.user_id,
+      )
+    ) {
       throw new RpcException({
         statusCode: 403,
         message: 'Not a member of this channel',
@@ -153,16 +157,18 @@ export class ChatService {
     const filtered_messages: IMessage[] = this.messages.filter(
       (elem) => elem.channel_id === data.channel_id,
     );
+    filtered_messages.reverse();
     return filtered_messages.splice(data.offset, data.limit);
   }
 
   messageCreate(data: CreateMessageDto): string {
     const is_muted = this.mute_hist.find(
       (elem) =>
-        elem.user_id === data.user_id && elem.channel_id === data.channel_id);
+        elem.user_id === data.user_id && elem.channel_id === data.channel_id,
+    );
     console.log(is_muted?.timestamp, Date.now());
     if (is_muted && is_muted.timestamp >= Date.now()) {
-      throw new RpcException({ statusCode: 403, message: 'muted'});
+      throw new RpcException({ statusCode: 403, message: 'muted' });
     }
     const id = randomUUID();
     this.messages.push({ id, ...data });
@@ -173,7 +179,8 @@ export class ChatService {
   muteOne(data: IMutedUser) {
     const is_muted = this.mute_hist.find(
       (elem) =>
-        elem.user_id === data.user_id && elem.channel_id === data.channel_id);
+        elem.user_id === data.user_id && elem.channel_id === data.channel_id,
+    );
     if (is_muted) is_muted.timestamp = Date.now() + data.timestamp * 60_000;
     else {
       this.mute_hist.push({
@@ -187,15 +194,17 @@ export class ChatService {
   unmuteOne(data: IMutedUser) {
     const is_muted = this.mute_hist.find(
       (elem) =>
-        elem.user_id === data.user_id && elem.channel_id === data.channel_id);
+        elem.user_id === data.user_id && elem.channel_id === data.channel_id,
+    );
     if (!is_muted || is_muted.timestamp < Date.now()) {
       throw new RpcException({
         statusCode: 400,
-        message: 'Target user is not muted'
+        message: 'Target user is not muted',
       });
     }
     this.mute_hist = this.mute_hist.filter(
       (elem) =>
-        elem.user_id !== data.user_id || elem.channel_id !== data.channel_id);
+        elem.user_id !== data.user_id || elem.channel_id !== data.channel_id,
+    );
   }
 }

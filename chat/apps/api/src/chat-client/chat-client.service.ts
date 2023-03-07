@@ -1,8 +1,8 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
-import { firstValueFrom, lastValueFrom, Observable, takeUntil } from 'rxjs';
-import {CreateMuteDto} from './dto/CreateMute.dto';
-import {GetMessagesDto} from './dto/GetMessagesDto';
+import { firstValueFrom, Observable } from 'rxjs';
+import { CreateMuteDto } from './dto/CreateMute.dto';
+import { GetMessagesDto } from './dto/GetMessagesDto';
 import { IChannel } from './interfaces/IChannel';
 import { ISimplifiedMessage } from './interfaces/IChannelMessages';
 import { IMessage } from './interfaces/IUserMessage';
@@ -82,7 +82,9 @@ export class ChatClientService {
   }
 
   createMessage(message: IMessage): Promise<string> {
-    return firstValueFrom(this.chatService.send<string>('message.create', message));
+    return firstValueFrom(
+      this.chatService.send<string>('message.create', message),
+    );
   }
 
   // mute
@@ -93,6 +95,7 @@ export class ChatClientService {
 
   unmuteUser(user: string, data: CreateMuteDto): Promise<boolean> {
     return firstValueFrom(
-      this.chatService.send<boolean>('channel.unmute', data));
+      this.chatService.send<boolean>('channel.unmute', data),
+    );
   }
 }

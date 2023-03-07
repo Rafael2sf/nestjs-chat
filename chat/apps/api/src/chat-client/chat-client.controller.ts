@@ -6,6 +6,7 @@ import {
   Headers,
   Logger,
   Param,
+  ParseIntPipe,
   Post,
   Query,
   Res,
@@ -42,7 +43,7 @@ export class ChatClientController {
         res.json(value).send();
       })
       .catch((e) => {
-        if (!e.statusCode) res.status(500).send();
+        if (!e.statusCode) res.status(503).send();
         else res.status(e.statusCode).json(e.message).send();
       });
   }
@@ -69,7 +70,7 @@ export class ChatClientController {
         res.json({ channel_id: value }).send();
       })
       .catch((e) => {
-        if (!e.statusCode) res.status(500).send();
+        if (!e.statusCode) res.status(503).send();
         else res.status(e.statusCode).json(e.message).send();
       });
   }
@@ -93,7 +94,7 @@ export class ChatClientController {
       .deleteChannel(jwt.split(' ')[1], channel_id)
       .then(() => res.json().send)
       .catch((e) => {
-        if (!e.statusCode) res.status(500).send();
+        if (!e.statusCode) res.status(503).send();
         else res.status(e.statusCode).json(e.message).send();
       });
   }
@@ -107,8 +108,8 @@ export class ChatClientController {
   getChannelMessages(
     @Headers('authorization') jwt,
     @Param('channel_id') channel_id: string,
-    @Query('limit') limit,
-    @Query('offset') offset,
+    @Query('limit', ParseIntPipe) limit: number,
+    @Query('offset', ParseIntPipe) offset: number,
     @Res() res: Response,
   ) {
     this.logger.log(
@@ -123,7 +124,7 @@ export class ChatClientController {
       })
       .then((value) => res.json(value).send)
       .catch((e) => {
-        if (!e.statusCode) res.status(500).send();
+        if (!e.statusCode) res.status(503).send();
         else res.status(e.statusCode).json(e.message).send();
       });
   }
@@ -147,7 +148,7 @@ export class ChatClientController {
       .joinChannel(jwt.split(' ')[1], channel_id)
       .then(() => res.json().send)
       .catch((e) => {
-        if (!e.statusCode) res.status(500).send();
+        if (!e.statusCode) res.status(503).send();
         else res.status(e.statusCode).json(e.message).send();
       });
   }
@@ -175,7 +176,7 @@ export class ChatClientController {
         res.json().send();
       })
       .catch((e) => {
-        if (!e.statusCode) res.status(500).send();
+        if (!e.statusCode) res.status(503).send();
         else res.status(e.statusCode).json(e.message).send();
       });
   }
@@ -186,18 +187,20 @@ export class ChatClientController {
   muteUser(
     @Headers('authorization') jwt,
     @Param('channel_id') channel_id,
-    @Param('username') username,
-    @Query('minutes') timestamp,
+    @Param('username') username: string,
+    @Query('minutes', ParseIntPipe) timestamp: number,
     @Res() res: Response,
   ) {
-    this.logger.log(`POST /channels/${channel_id}/mute/${username} jwt=${jwt} minutes=${timestamp}`);
+    this.logger.log(
+      `POST /channels/${channel_id}/mute/${username} jwt=${jwt} minutes=${timestamp}`,
+    );
     this.chatService
       .muteUser(jwt.split(' ')[1], { user_id: username, channel_id, timestamp })
       .then(() => {
         res.json().send();
       })
       .catch((e) => {
-        if (!e.statusCode) res.status(500).send();
+        if (!e.statusCode) res.status(503).send();
         else res.status(e.statusCode).json(e.message).send();
       });
   }
@@ -209,14 +212,20 @@ export class ChatClientController {
     @Param('username') username,
     @Res() res: Response,
   ) {
-    this.logger.log(`DELETE /channels/${channel_id}/mute/${username} jwt=${jwt}`);
+    this.logger.log(
+      `DELETE /channels/${channel_id}/mute/${username} jwt=${jwt}`,
+    );
     this.chatService
-      .unmuteUser(jwt.split(' ')[1], { user_id: username, channel_id, timestamp: undefined })
+      .unmuteUser(jwt.split(' ')[1], {
+        user_id: username,
+        channel_id,
+        timestamp: undefined,
+      })
       .then(() => {
         res.json().send();
       })
       .catch((e) => {
-        if (!e.statusCode) res.status(500).send();
+        if (!e.statusCode) res.status(503).send();
         else res.status(e.statusCode).json(e.message).send();
       });
   }

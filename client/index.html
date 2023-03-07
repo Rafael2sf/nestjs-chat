@@ -137,11 +137,9 @@
 			});
 
 			socket.on('room.join', function (msg) {
+        console.log(msg);
         if (msg.statusCode === 200)
-        {
-				  console.log(msg);
 				  append_message(msg.user_id, msg.id, "joined the room");
-        }
         // handle join failed 
 			});
 			

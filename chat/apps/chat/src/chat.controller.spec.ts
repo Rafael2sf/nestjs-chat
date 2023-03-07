@@ -1,22 +1,40 @@
-// import { Test, TestingModule } from '@nestjs/testing';
-// import { ChatController } from './chat.controller';
-// import { ChatService } from './chat.service';
+import { Test, TestingModule } from '@nestjs/testing';
+import { ChatController } from './chat.controller';
+import { ChatService } from './chat.service';
 
-// describe('ChatController', () => {
-//   let chatController: ChatController;
+describe('ChatController', () => {
+  let chatController: ChatController;
 
-//   beforeEach(async () => {
-//     const app: TestingModule = await Test.createTestingModule({
-//       controllers: [ChatController],
-//       providers: [ChatService],
-//     }).compile();
+  beforeEach(async () => {
+    const app: TestingModule = await Test.createTestingModule({
+      controllers: [ChatController],
+      providers: [ChatService],
+    }).compile();
 
-//     chatController = app.get<ChatController>(ChatController);
-//   });
+    chatController = app.get<ChatController>(ChatController);
+  });
 
-//   describe('root', () => {
-//     it('should return "Hello World!"', () => {
-//       expect(chatController.getHello()).toBe('Hello World!');
-//     });
-//   });
-// });
+  describe('chat', () => {
+    let channel_id: string = undefined;
+
+    it('it should be defined', () => {
+      expect(chatController).toBeDefined();
+    });
+
+    it('create channel', () => {
+      channel_id = chatController.OnChannelCreate({
+        user_id: 'John Doe',
+        name: 'test',
+      });
+      expect(channel_id).toHaveLength(36);
+    });
+
+    it('get channel', () => {
+      expect(chatController.getChannels()).toEqual({
+        channel_id,
+        owner: 'John Doe',
+        name: 'test',
+      });
+    });
+  });
+});

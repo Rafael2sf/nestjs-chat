@@ -11,7 +11,7 @@ import {
 import { Socket } from 'socket.io';
 import { Server } from 'socket.io';
 import { ChatClientService } from './chat-client.service';
-import {IChannel} from './interfaces/IChannel';
+import { IChannel } from './interfaces/IChannel';
 
 @Injectable()
 @WebSocketGateway({ path: '/chat', serveClient: false, cors: { origin: '*' } })
@@ -19,7 +19,7 @@ export class ChatClientGateway
   implements OnGatewayConnection, OnGatewayDisconnect
 {
   private readonly logger = new Logger(ChatClientGateway.name);
-  constructor(private readonly chatService: ChatClientService) {}
+  constructor(private readonly chatClientService: ChatClientService) {}
   @WebSocketServer()
   server: Server;
 
@@ -53,7 +53,7 @@ export class ChatClientGateway
       this.logger.log(
         `room.join: ${client.id}, user: ${id}, channel_id: ${data}`,
       );
-      this.chatService
+      this.chatClientService
         .joinRoom(id, data)
         .then((channel) => {
           client.to(data).emit('room.join', {
@@ -68,7 +68,18 @@ export class ChatClientGateway
           });
           client.join(data);
         })
-        .catch((err) => client.emit('room.join', err));
+        .catch((err) => {
+          if (!err.statusCode)
+            client.emit('room.join', {
+              statusCode: 503,
+              message: 'Service unavailable',
+            });
+          else
+            client.emit('room.join', {
+              statusCode: err.statusCode,
+              message: err.message,
+            });
+        });
     }
   }
 
@@ -112,11 +123,14 @@ export class ChatClientGateway
   }
 
   @SubscribeMessage('message.create')
-  async OnMessageCreate(@Payload() data: any, @ConnectedSocket() client: Socket) {
+  async OnMessageCreate(
+    @Payload() data: any,
+    @ConnectedSocket() client: Socket,
+  ) {
     const id = client?.handshake?.auth?.token;
     if (client.rooms.has(data.channel_id)) {
       try {
-        const message_id = await this.chatService.createMessage({
+        const message_id = await this.chatClientService.createMessage({
           id: undefined,
           user_id: id,
           channel_id: data.channel_id,
@@ -136,8 +150,17 @@ export class ChatClientGateway
           id: message_id,
           data: data.data,
         });
-      } catch (e) {
-        client.emit('message.create', e);
+      } catch (err) {
+        if (!err.statusCode)
+          client.emit('room.join', {
+            statusCode: 503,
+            message: 'Service unavailable',
+          });
+        else
+          client.emit('room.join', {
+            statusCode: err.statusCode,
+            message: err.message,
+          });
       }
     } else {
       client.emit('message.create', {
@@ -151,7 +174,7 @@ export class ChatClientGateway
     const id = client.handshake.auth?.token;
     const query = client.handshake.query;
     if (query.autojoin === 'true') {
-      this.chatService.joinAllRooms(id).subscribe({
+      this.chatClientService.joinAllRooms(id).subscribe({
         next: (channel: IChannel) => {
           client.join(channel.id);
           client.to(channel.id).emit('room.join', {
@@ -165,7 +188,18 @@ export class ChatClientGateway
             ...channel,
           });
         },
-        error: (err) => {console.log(err)},
+        error: (err) => {
+          if (err.statusCode)
+            client.emit('room.join', {
+              statusCode: err.statusCode,
+              message: err.message,
+            });
+          else
+            client.emit('room.join', {
+              statusCode: 500,
+              message: 'service unavailable',
+            });
+        },
         complete: console.info,
       });
     }
