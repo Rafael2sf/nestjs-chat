@@ -16,6 +16,24 @@ import { CreateChannelDto } from './dto/CreateChannel.dto';
 import { Response } from 'express';
 import { ChatClientGateway } from './chat-client.gateway';
 
+function ResponseHandler<T>(
+  res: Response, onFullFilled: Promise<T>,
+  sucess = null,
+  error = null,
+): void {
+  onFullFilled
+    .then((data) => {
+      if (sucess) sucess(res, data)
+      else res.json(data);
+    })
+    .catch((e) => {
+      if (!e.statusCode)
+        res.status(503).json({ message: 'Service unavailable' });
+      else if (error) error(res, e)
+      else res.status(e.statusCode).json({ message: e.message, error: e.error });
+    });
+}
+
 @Controller('/')
 export class ChatClientController {
   constructor(
@@ -24,10 +42,13 @@ export class ChatClientController {
   ) {}
   private readonly logger = new Logger(ChatClientController.name);
 
-  /**
-   * @TODO validate jwt -> get user ->
-   * @TODO validate @ Param decorators
-   * */
+  @Get()
+  async test_anything(@Res() res: Response): Promise<void> {
+    const result = await this.chatService.test()
+      .then(() => console.log())
+      .catch((e) => console.error(e))
+    res.json(result)
+  }
 
   /**
    * @Brief Return all channels visible to User $jwt
@@ -35,17 +56,9 @@ export class ChatClientController {
    * return 200 - [ channel ...]
    */
   @Get('/channels/')
-  getChannels(@Headers('authorization') jwt, @Res() res: Response) {
-    this.logger.log(`GET '/channels/' from ${jwt}`);
-    this.chatService
-      .getChannels()
-      .then((value) => {
-        res.json(value).send();
-      })
-      .catch((e) => {
-        if (!e.statusCode) res.status(503).send();
-        else res.status(e.statusCode).json(e.message).send();
-      });
+  getChannels(@Headers('authorization') jwt: string, @Res() res: Response) {
+    this.logger.log(`GET /channels/ jwt=${jwt}`);
+    ResponseHandler(res, this.chatService.getChannels());
   }
 
   /**
@@ -57,22 +70,14 @@ export class ChatClientController {
    */
   @Post('/channels/')
   createChannel(
-    @Headers('authorization') jwt,
+    @Headers('authorization') jwt: string,
     @Body() body: CreateChannelDto,
     @Res() res: Response,
   ) {
-    this.logger.log(
-      `POST '/channels/' from ${jwt}: channel_id => ${body.name}`,
+    this.logger.log(`POST /channels/ jwt=${jwt}: name=${body.name}`);
+    ResponseHandler(res,
+      this.chatService.createChannel(jwt.split(' ')[1], body.name),
     );
-    this.chatService
-      .createChannel(jwt.split(' ')[1], body.name)
-      .then((value) => {
-        res.json({ channel_id: value }).send();
-      })
-      .catch((e) => {
-        if (!e.statusCode) res.status(503).send();
-        else res.status(e.statusCode).json(e.message).send();
-      });
   }
 
   /**
@@ -83,20 +88,40 @@ export class ChatClientController {
    */
   @Delete('/channels/:channel_id/')
   deleteChannel(
-    @Headers('authorization') jwt,
+    @Headers('authorization') jwt: string,
     @Param('channel_id') channel_id: string,
     @Res() res: Response,
   ) {
-    this.logger.log(
-      `DELETE '/channels/:channel_id/' from ${jwt}: channel_id => ${channel_id}`,
+    this.logger.log(`DELETE /channels/${channel_id}/ jwt=${jwt}`);
+    ResponseHandler(res,
+      this.chatService.deleteChannel(jwt.split(' ')[1], channel_id),
     );
-    this.chatService
-      .deleteChannel(jwt.split(' ')[1], channel_id)
-      .then(() => res.json().send)
-      .catch((e) => {
-        if (!e.statusCode) res.status(503).send();
-        else res.status(e.statusCode).json(e.message).send();
-      });
+  }
+
+  /**
+   *
+   * @param jwt
+   * @param channel_id
+   * @param limit
+   * @param offset
+   */
+  @Get('/channels/:channel_id/')
+  getChannel(
+    @Headers('authorization') jwt: string,
+    @Param('channel_id') channel_id: string,
+    @Query('limit', ParseIntPipe) limit: number,
+    @Query('offset', ParseIntPipe) offset: number,
+    @Res() res: Response,
+  ) {
+    this.logger.log(`GET /channels/${channel_id}/ jwt=${jwt}`);
+    ResponseHandler(
+      res, this.chatService.getChannel({
+        user_id: jwt.split(' ')[1],
+        channel_id,
+        limit,
+        offset,
+      })
+    );
   }
 
   /**
@@ -104,29 +129,23 @@ export class ChatClientController {
    * @param jwt authorization token
    * @return 200
    **/
-  @Get('/channels/:channel_id/')
+  @Get('/channels/:channel_id/history')
   getChannelMessages(
-    @Headers('authorization') jwt,
+    @Headers('authorization') jwt: string,
     @Param('channel_id') channel_id: string,
     @Query('limit', ParseIntPipe) limit: number,
     @Query('offset', ParseIntPipe) offset: number,
     @Res() res: Response,
   ) {
-    this.logger.log(
-      `GET '/channels/:channel_id/' from ${jwt}: channel_id => ${channel_id}`,
-    );
-    this.chatService
-      .getMessages({
+    this.logger.log(`GET /channels/${channel_id}/history jwt=${jwt}`);
+    ResponseHandler(
+      res, this.chatService.getMessages({
         user_id: jwt.split(' ')[1],
         channel_id,
-        limit: limit ?? 42,
-        offset: offset ?? 0,
+        limit,
+        offset,
       })
-      .then((value) => res.json(value).send)
-      .catch((e) => {
-        if (!e.statusCode) res.status(503).send();
-        else res.status(e.statusCode).json(e.message).send();
-      });
+    );
   }
 
   /**
@@ -137,20 +156,14 @@ export class ChatClientController {
    */
   @Post('/channels/:channel_id/join')
   joinChannel(
-    @Headers('authorization') jwt,
+    @Headers('authorization') jwt: string,
     @Param('channel_id') channel_id: string,
     @Res() res: Response,
   ) {
-    this.logger.log(
-      `POST '/channels/:channel_id/join' from ${jwt}: channel_id => ${channel_id}`,
+    this.logger.log(`POST /channels/${channel_id}/join jwt=${jwt}`);
+    ResponseHandler(res,
+      this.chatService.joinChannel(jwt.split(' ')[1], channel_id),
     );
-    this.chatService
-      .joinChannel(jwt.split(' ')[1], channel_id)
-      .then(() => res.json().send)
-      .catch((e) => {
-        if (!e.statusCode) res.status(503).send();
-        else res.status(e.statusCode).json(e.message).send();
-      });
   }
 
   /**
@@ -161,32 +174,32 @@ export class ChatClientController {
    */
   @Delete('/channels/:channel_id/join')
   leaveChannel(
-    @Headers('authorization') jwt,
-    @Param('channel_id') channel_id,
+    @Headers('authorization') jwt: string,
+    @Param('channel_id') channel_id: string,
     @Res() res: Response,
   ) {
-    this.logger.log(
-      `DELETE '/channels/:channel_id/join' from ${jwt}: channel_id => ${channel_id}`,
-    );
-    this.chatService
-      .leaveChannel(jwt.split(' ')[1], channel_id)
-      .then((is_owner) => {
+    this.logger.log(`DELETE /channels/${channel_id}/join jwt=${jwt}`);
+    ResponseHandler(res,
+      this.chatService.leaveChannel(jwt.split(' ')[1], channel_id),
+      (is_owner: boolean) => {
         if (is_owner) this.chatGateway.forceRoomDestroy(channel_id);
         else this.chatGateway.forceRoomLeave(jwt.split(' ')[1], channel_id);
         res.json().send();
-      })
-      .catch((e) => {
-        if (!e.statusCode) res.status(503).send();
-        else res.status(e.statusCode).json(e.message).send();
-      });
+      },
+    )
   }
 
-  /* TODO mute / unmute */
-
+  /**
+   * @Brief User $jwt mutes an user in a $channel_id for x minutes
+   * @param jwt authorization token
+   * @param username target user to mute
+   * @query minutes mute length
+   * @return 201
+   */
   @Post('/channels/:channel_id/mute/:username')
   muteUser(
-    @Headers('authorization') jwt,
-    @Param('channel_id') channel_id,
+    @Headers('authorization') jwt: string,
+    @Param('channel_id') channel_id: string,
     @Param('username') username: string,
     @Query('minutes', ParseIntPipe) timestamp: number,
     @Res() res: Response,
@@ -194,39 +207,37 @@ export class ChatClientController {
     this.logger.log(
       `POST /channels/${channel_id}/mute/${username} jwt=${jwt} minutes=${timestamp}`,
     );
-    this.chatService
-      .muteUser(jwt.split(' ')[1], { user_id: username, channel_id, timestamp })
-      .then(() => {
-        res.json().send();
+    ResponseHandler(res,
+      this.chatService.muteUser(jwt.split(' ')[1], {
+        user_id: username,
+        channel_id,
+        timestamp
       })
-      .catch((e) => {
-        if (!e.statusCode) res.status(503).send();
-        else res.status(e.statusCode).json(e.message).send();
-      });
+    );
   }
 
+  /**
+   * @Brief User $jwt unmutes $username in  $channel_id
+   * @param jwt authorization token
+   * @param username target user to unmute
+   * @return 200
+   */
   @Delete('/channels/:channel_id/mute/:username')
   unmuteUser(
-    @Headers('authorization') jwt,
-    @Param('channel_id') channel_id,
-    @Param('username') username,
+    @Headers('authorization') jwt: string,
+    @Param('channel_id') channel_id: string,
+    @Param('username') username: string,
     @Res() res: Response,
   ) {
     this.logger.log(
       `DELETE /channels/${channel_id}/mute/${username} jwt=${jwt}`,
     );
-    this.chatService
-      .unmuteUser(jwt.split(' ')[1], {
+    ResponseHandler(res,
+      this.chatService.unmuteUser(jwt.split(' ')[1], {
         user_id: username,
         channel_id,
         timestamp: undefined,
       })
-      .then(() => {
-        res.json().send();
-      })
-      .catch((e) => {
-        if (!e.statusCode) res.status(503).send();
-        else res.status(e.statusCode).json(e.message).send();
-      });
+    )
   }
 }

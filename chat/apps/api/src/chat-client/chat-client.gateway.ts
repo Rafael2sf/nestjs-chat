@@ -13,6 +13,21 @@ import { Server } from 'socket.io';
 import { ChatClientService } from './chat-client.service';
 import { IChannel } from './interfaces/IChannel';
 
+function socket_error(client: Socket, error: any, event: string) {
+  if (!error.statusCode)
+    client.emit(event, {
+      statusCode: 503,
+      message: 'Service unavailable',
+      error: 'Connection failed'
+    });
+  else
+    client.emit(event, {
+      statusCode: error.statusCode,
+      message: error.message,
+      error: error.error,
+    });
+}
+
 @Injectable()
 @WebSocketGateway({ path: '/chat', serveClient: false, cors: { origin: '*' } })
 export class ChatClientGateway
@@ -69,16 +84,7 @@ export class ChatClientGateway
           client.join(data);
         })
         .catch((err) => {
-          if (!err.statusCode)
-            client.emit('room.join', {
-              statusCode: 503,
-              message: 'Service unavailable',
-            });
-          else
-            client.emit('room.join', {
-              statusCode: err.statusCode,
-              message: err.message,
-            });
+          socket_error(client, err, 'room.join');
         });
     }
   }
@@ -124,11 +130,14 @@ export class ChatClientGateway
 
   @SubscribeMessage('message.create')
   async OnMessageCreate(
-    @Payload() data: any,
+    @Payload() data: { channel_id: string; data: string },
     @ConnectedSocket() client: Socket,
   ) {
     const id = client?.handshake?.auth?.token;
     if (client.rooms.has(data.channel_id)) {
+      this.logger.log(
+        `message.create: ${client.id}, user_id: ${id}, channel_id: ${data.data}`,
+      );
       try {
         const message_id = await this.chatClientService.createMessage({
           id: undefined,
@@ -151,16 +160,7 @@ export class ChatClientGateway
           data: data.data,
         });
       } catch (err) {
-        if (!err.statusCode)
-          client.emit('room.join', {
-            statusCode: 503,
-            message: 'Service unavailable',
-          });
-        else
-          client.emit('room.join', {
-            statusCode: err.statusCode,
-            message: err.message,
-          });
+        socket_error(client, err, 'room.join');
       }
     } else {
       client.emit('message.create', {

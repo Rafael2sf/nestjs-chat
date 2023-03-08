@@ -1,5 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
+import {IChannelData} from 'apps/chat/src/interfaces/chat.interfaces';
 import { firstValueFrom, Observable } from 'rxjs';
 import { CreateMuteDto } from './dto/CreateMute.dto';
 import { GetMessagesDto } from './dto/GetMessagesDto';
@@ -13,32 +14,44 @@ export class ChatClientService {
     @Inject('CHAT_SERVICE') private readonly chatService: ClientProxy,
   ) {}
 
-  // Channels
-  getChannels(): Promise<IChannel[]> {
-    return firstValueFrom(this.chatService.send<IChannel[]>('channel.get', {}));
+  test(): Promise<void> {
+    return firstValueFrom(this.chatService.send<void>('test', {}));
   }
 
-  createChannel(user_id: string, name: string): Promise<string> {
+  // Channels
+
+  getChannel(data: GetMessagesDto): Promise<IChannelData> {
     return firstValueFrom(
+      this.chatService.send<IChannelData>('channel.get', data),
+    );
+  }
+
+  getChannels(): Promise<IChannel[]> {
+    return firstValueFrom(this.chatService.send<IChannel[]>('channel.all', {}));
+  }
+
+  async createChannel(user_id: string, name: string): Promise<{ id: string }> {
+    const id = await firstValueFrom(
       this.chatService.send<string>('channel.create', {
         user_id,
         name,
       }),
     );
+    return { id };
   }
 
-  deleteChannel(user_id: string, channel_id: string): Promise<string> {
-    return firstValueFrom(
-      this.chatService.send<string>('channel.delete', {
+  async deleteChannel(user_id: string, channel_id: string): Promise<void> {
+    await firstValueFrom(
+      this.chatService.send<boolean>('channel.delete', {
         user_id,
         channel_id,
       }),
     );
   }
 
-  joinChannel(user_id: string, channel_id: string): Promise<boolean> {
-    return firstValueFrom(
-      this.chatService.send<boolean>('channel.join', {
+  async joinChannel(user_id: string, channel_id: string): Promise<void> {
+    await firstValueFrom(
+      this.chatService.send<void>('channel.join', {
         user_id,
         channel_id,
       }),
@@ -64,12 +77,9 @@ export class ChatClientService {
     );
   }
 
+  // No error handler
   joinAllRooms(user_id: string): Observable<IChannel> {
-    try {
-      return this.chatService.send<IChannel>('room.join', user_id);
-    } catch (e) {
-      console.log('join all rooms catch', e);
-    }
+    return this.chatService.send<IChannel>('room.join', user_id);
   }
 
   // Messages
@@ -88,14 +98,11 @@ export class ChatClientService {
   }
 
   // mute
-  muteUser(user: string, data: CreateMuteDto): Promise<boolean> {
-    console.log(data.timestamp);
-    return firstValueFrom(this.chatService.send<boolean>('channel.mute', data));
+  async muteUser(user: string, data: CreateMuteDto): Promise<void> {
+    await firstValueFrom(this.chatService.send<void>('channel.mute', data));
   }
 
-  unmuteUser(user: string, data: CreateMuteDto): Promise<boolean> {
-    return firstValueFrom(
-      this.chatService.send<boolean>('channel.unmute', data),
-    );
+  async unmuteUser(user: string, data: CreateMuteDto): Promise<void> {
+    await firstValueFrom(this.chatService.send<void>('channel.unmute', data));
   }
 }

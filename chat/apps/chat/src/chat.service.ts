@@ -11,6 +11,7 @@ import {
   IMessage,
   IChannelUser,
   IMutedUser,
+  IChannelData,
 } from './interfaces/chat.interfaces';
 
 @Injectable()
@@ -19,7 +20,33 @@ export class ChatService {
   private messages: IMessage[] = [];
   private chat_user: IChannelUser[] = [];
   private mute_hist: IMutedUser[] = [];
-  // Channels
+
+  test(): Promise<boolean> {
+    //throw new RpcException({ statusCode: 403 });
+    return new Promise((res) => setTimeout(() => res(true), 2000));
+  }
+
+  channelGetOne(data: GetMessagesDto): IChannelData {
+    const channel = this.channels.find((elem) => elem.id === data.channel_id);
+    if (!channel) {
+      throw new RpcException({
+        statusCode: 400,
+        message: 'Invalid channel_id',
+      });
+    }
+    let members: string[] = [];
+    this.chat_user.map((elem) => {
+      if (elem.channel_id == data.channel_id) members.push(elem.user_id);
+    });
+    if (!members.find((elem) => elem === data.user_id)) {
+      throw new RpcException({
+        statusCode: 403,
+        message: 'Not a member of this channel',
+      });
+    }
+    members = members.splice(data.offset, data.limit);
+    return { ...channel, members };
+  }
 
   channelGetAll(): IChannel[] {
     return this.channels;
@@ -27,7 +54,7 @@ export class ChatService {
 
   channelCreateOne(data: CreateChannelDto): string | undefined {
     const id = randomUUID();
-    this.channels.push({ id, owner: data.user_id, name: data.name });
+    this.channels.push({ id, owner: data.user_id, name: data.name, type: 'public' });
     this.chat_user.push({ user_id: data.user_id, channel_id: id });
     return id;
   }
@@ -166,7 +193,6 @@ export class ChatService {
       (elem) =>
         elem.user_id === data.user_id && elem.channel_id === data.channel_id,
     );
-    console.log(is_muted?.timestamp, Date.now());
     if (is_muted && is_muted.timestamp >= Date.now()) {
       throw new RpcException({ statusCode: 403, message: 'muted' });
     }

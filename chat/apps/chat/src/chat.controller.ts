@@ -6,16 +6,28 @@ import { CreateChannelDto } from './dto/CreateChannel.dto';
 import { CreateMessageDto } from './dto/CreateMessage.dto';
 import { GetMessagesDto } from './dto/GetMessagesDto';
 import { UserChannelDto } from './dto/UserChannel.dto';
-import { IChannel, IMessage, IMutedUser } from './interfaces/chat.interfaces';
+import { IChannel, IChannelData, IMessage, IMutedUser } from './interfaces/chat.interfaces';
 
 @Controller()
 export class ChatController {
   constructor(private readonly chatService: ChatService) {}
   private readonly logger = new Logger(ChatController.name);
 
-  @MessagePattern('channel.get')
+  @MessagePattern('test')
+  test(): Promise<boolean> {
+    return this.chatService.test();
+  }
+
+  @MessagePattern('channel.all')
   getChannels(): IChannel[] {
+    this.logger.log(`channel.all`);
     return this.chatService.channelGetAll();
+  }
+
+  @MessagePattern('channel.get')
+  getChannel(@Payload() data: GetMessagesDto): IChannelData {
+    this.logger.log(`channel.get: ${JSON.stringify(data)}`);
+    return this.chatService.channelGetOne(data);
   }
 
   @MessagePattern('channel.create')
@@ -32,7 +44,7 @@ export class ChatController {
   }
 
   @MessagePattern('channel.join')
-  OnChannelJoin(@Payload() data: UserChannelDto): boolean {
+  OnChannelJoin(@Payload() data: UserChannelDto) {
     this.logger.log(`channel.join: ${JSON.stringify(data)}`);
     this.chatService.channelJoinOne(data);
     return true;
