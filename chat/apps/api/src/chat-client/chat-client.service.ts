@@ -1,6 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
-import {IChannelData} from 'apps/chat/src/interfaces/chat.interfaces';
+import { IChannelData } from 'apps/chat/src/interfaces/chat.interfaces';
 import { firstValueFrom, Observable } from 'rxjs';
 import { CreateMuteDto } from './dto/CreateMute.dto';
 import { GetMessagesDto } from './dto/GetMessagesDto';
@@ -42,7 +42,7 @@ export class ChatClientService {
 
   async deleteChannel(user_id: string, channel_id: string): Promise<void> {
     await firstValueFrom(
-      this.chatService.send<boolean>('channel.delete', {
+      this.chatService.send<void>('channel.delete', {
         user_id,
         channel_id,
       }),

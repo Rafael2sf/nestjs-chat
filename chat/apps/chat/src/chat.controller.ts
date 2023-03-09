@@ -6,7 +6,12 @@ import { CreateChannelDto } from './dto/CreateChannel.dto';
 import { CreateMessageDto } from './dto/CreateMessage.dto';
 import { GetMessagesDto } from './dto/GetMessagesDto';
 import { UserChannelDto } from './dto/UserChannel.dto';
-import { IChannel, IChannelData, IMessage, IMutedUser } from './interfaces/chat.interfaces';
+import {
+  IChannel,
+  IChannelData,
+  IMessage,
+  IMutedUser,
+} from './interfaces/chat.interfaces';
 
 @Controller()
 export class ChatController {
@@ -44,7 +49,7 @@ export class ChatController {
   }
 
   @MessagePattern('channel.join')
-  OnChannelJoin(@Payload() data: UserChannelDto) {
+  OnChannelJoin(@Payload() data: UserChannelDto): boolean {
     this.logger.log(`channel.join: ${JSON.stringify(data)}`);
     this.chatService.channelJoinOne(data);
     return true;

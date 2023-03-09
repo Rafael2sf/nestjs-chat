@@ -18,7 +18,7 @@ function socket_error(client: Socket, error: any, event: string) {
     client.emit(event, {
       statusCode: 503,
       message: 'Service unavailable',
-      error: 'Connection failed'
+      error: 'Connection failed',
     });
   else
     client.emit(event, {
@@ -164,7 +164,7 @@ export class ChatClientGateway
       }
     } else {
       client.emit('message.create', {
-        statusCode: 400,
+        statusCode: 403,
         message: 'Not a member of this room',
       });
     }

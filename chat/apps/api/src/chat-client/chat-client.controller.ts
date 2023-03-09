@@ -16,21 +16,23 @@ import { CreateChannelDto } from './dto/CreateChannel.dto';
 import { Response } from 'express';
 import { ChatClientGateway } from './chat-client.gateway';
 
-function ResponseHandler<T>(
-  res: Response, onFullFilled: Promise<T>,
+function AsyncResponse<T>(
+  res: Response,
+  onFullFilled: Promise<T>,
   sucess = null,
   error = null,
 ): void {
   onFullFilled
     .then((data) => {
-      if (sucess) sucess(res, data)
+      if (sucess) sucess(data, res);
       else res.json(data);
     })
     .catch((e) => {
       if (!e.statusCode)
         res.status(503).json({ message: 'Service unavailable' });
-      else if (error) error(res, e)
-      else res.status(e.statusCode).json({ message: e.message, error: e.error });
+      else if (error) error(e, res);
+      else
+        res.status(e.statusCode).json({ message: e.message, error: e.error });
     });
 }
 
@@ -44,10 +46,11 @@ export class ChatClientController {
 
   @Get()
   async test_anything(@Res() res: Response): Promise<void> {
-    const result = await this.chatService.test()
+    const result = await this.chatService
+      .test()
       .then(() => console.log())
-      .catch((e) => console.error(e))
-    res.json(result)
+      .catch((e) => console.error(e));
+    res.json(result);
   }
 
   /**
@@ -58,7 +61,7 @@ export class ChatClientController {
   @Get('/channels/')
   getChannels(@Headers('authorization') jwt: string, @Res() res: Response) {
     this.logger.log(`GET /channels/ jwt=${jwt}`);
-    ResponseHandler(res, this.chatService.getChannels());
+    AsyncResponse(res, this.chatService.getChannels());
   }
 
   /**
@@ -75,7 +78,8 @@ export class ChatClientController {
     @Res() res: Response,
   ) {
     this.logger.log(`POST /channels/ jwt=${jwt}: name=${body.name}`);
-    ResponseHandler(res,
+    AsyncResponse(
+      res,
       this.chatService.createChannel(jwt.split(' ')[1], body.name),
     );
   }
@@ -93,7 +97,8 @@ export class ChatClientController {
     @Res() res: Response,
   ) {
     this.logger.log(`DELETE /channels/${channel_id}/ jwt=${jwt}`);
-    ResponseHandler(res,
+    AsyncResponse(
+      res,
       this.chatService.deleteChannel(jwt.split(' ')[1], channel_id),
     );
   }
@@ -114,13 +119,14 @@ export class ChatClientController {
     @Res() res: Response,
   ) {
     this.logger.log(`GET /channels/${channel_id}/ jwt=${jwt}`);
-    ResponseHandler(
-      res, this.chatService.getChannel({
+    AsyncResponse(
+      res,
+      this.chatService.getChannel({
         user_id: jwt.split(' ')[1],
         channel_id,
         limit,
         offset,
-      })
+      }),
     );
   }
 
@@ -138,13 +144,14 @@ export class ChatClientController {
     @Res() res: Response,
   ) {
     this.logger.log(`GET /channels/${channel_id}/history jwt=${jwt}`);
-    ResponseHandler(
-      res, this.chatService.getMessages({
+    AsyncResponse(
+      res,
+      this.chatService.getMessages({
         user_id: jwt.split(' ')[1],
         channel_id,
         limit,
         offset,
-      })
+      }),
     );
   }
 
@@ -161,7 +168,8 @@ export class ChatClientController {
     @Res() res: Response,
   ) {
     this.logger.log(`POST /channels/${channel_id}/join jwt=${jwt}`);
-    ResponseHandler(res,
+    AsyncResponse(
+      res,
       this.chatService.joinChannel(jwt.split(' ')[1], channel_id),
     );
   }
@@ -179,14 +187,15 @@ export class ChatClientController {
     @Res() res: Response,
   ) {
     this.logger.log(`DELETE /channels/${channel_id}/join jwt=${jwt}`);
-    ResponseHandler(res,
+    AsyncResponse(
+      res,
       this.chatService.leaveChannel(jwt.split(' ')[1], channel_id),
       (is_owner: boolean) => {
         if (is_owner) this.chatGateway.forceRoomDestroy(channel_id);
         else this.chatGateway.forceRoomLeave(jwt.split(' ')[1], channel_id);
-        res.json().send();
+        res.send();
       },
-    )
+    );
   }
 
   /**
@@ -207,12 +216,13 @@ export class ChatClientController {
     this.logger.log(
       `POST /channels/${channel_id}/mute/${username} jwt=${jwt} minutes=${timestamp}`,
     );
-    ResponseHandler(res,
+    AsyncResponse(
+      res,
       this.chatService.muteUser(jwt.split(' ')[1], {
         user_id: username,
         channel_id,
-        timestamp
-      })
+        timestamp,
+      }),
     );
   }
 
@@ -232,12 +242,13 @@ export class ChatClientController {
     this.logger.log(
       `DELETE /channels/${channel_id}/mute/${username} jwt=${jwt}`,
     );
-    ResponseHandler(res,
+    AsyncResponse(
+      res,
       this.chatService.unmuteUser(jwt.split(' ')[1], {
         user_id: username,
         channel_id,
         timestamp: undefined,
-      })
-    )
+      }),
+    );
   }
 }

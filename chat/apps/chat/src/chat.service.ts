@@ -54,7 +54,12 @@ export class ChatService {
 
   channelCreateOne(data: CreateChannelDto): string | undefined {
     const id = randomUUID();
-    this.channels.push({ id, owner: data.user_id, name: data.name, type: 'public' });
+    this.channels.push({
+      id,
+      owner: data.user_id,
+      name: data.name,
+      type: 'public',
+    });
     this.chat_user.push({ user_id: data.user_id, channel_id: id });
     return id;
   }
@@ -110,6 +115,7 @@ export class ChatService {
       this.chat_user = this.chat_user.filter(
         (elem) => elem.channel_id !== data.channel_id,
       );
+      console.log('is owner');
       return true;
     } else {
       const filtered_chat_user = this.chat_user.filter(
@@ -122,6 +128,7 @@ export class ChatService {
           message: 'Not a member of this channel',
         });
       this.chat_user = filtered_chat_user;
+      console.log('is not owner');
       return false;
     }
   }
