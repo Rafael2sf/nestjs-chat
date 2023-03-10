@@ -1,10 +1,9 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
-import { IChannelData } from 'apps/chat/src/interfaces/chat.interfaces';
 import { firstValueFrom, Observable } from 'rxjs';
 import { CreateMuteDto } from './dto/CreateMute.dto';
 import { GetMessagesDto } from './dto/GetMessagesDto';
-import { IChannel } from './interfaces/IChannel';
+import { IChannel, IChannelData } from './interfaces/IChannel';
 import { ISimplifiedMessage } from './interfaces/IChannelMessages';
 import { IMessage } from './interfaces/IUserMessage';
 

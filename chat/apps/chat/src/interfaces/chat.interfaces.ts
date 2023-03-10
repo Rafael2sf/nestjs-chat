@@ -11,7 +11,8 @@ export interface IChannelUser {
 }
 
 export interface IChannelData extends IChannel {
-  members: string[];
+  users: string[];
+  members: number;
 }
 
 export interface IMessage {

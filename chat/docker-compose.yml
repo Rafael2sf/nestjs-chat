@@ -1,0 +1,22 @@
+version: '3.9'
+services:
+  api:
+    container_name: api
+    build:
+      context: .
+      dockerfile: ./apps/api/Dockerfile
+      target: dev
+    ports: 
+      - 3000:3000
+    volumes:
+      - ./apps/api/:/usr/src/app/apps/api/
+  chat:
+    container_name: chat
+    build:
+      context: .
+      dockerfile: ./apps/chat/Dockerfile
+      target: dev
+    expose:
+      - "3001"
+    volumes:
+      - ./apps/chat/:/usr/src/app/apps/chat/

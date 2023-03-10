@@ -34,18 +34,19 @@ export class ChatService {
         message: 'Invalid channel_id',
       });
     }
-    let members: string[] = [];
+    let users: string[] = [];
     this.chat_user.map((elem) => {
-      if (elem.channel_id == data.channel_id) members.push(elem.user_id);
+      if (elem.channel_id == data.channel_id) users.push(elem.user_id);
     });
-    if (!members.find((elem) => elem === data.user_id)) {
+    if (!users.find((elem) => elem === data.user_id)) {
       throw new RpcException({
         statusCode: 403,
         message: 'Not a member of this channel',
       });
     }
-    members = members.splice(data.offset, data.limit);
-    return { ...channel, members };
+    const members = users.length;
+    users = users.splice(data.offset, data.limit);
+    return { ...channel, users, members };
   }
 
   channelGetAll(): IChannel[] {
@@ -115,7 +116,6 @@ export class ChatService {
       this.chat_user = this.chat_user.filter(
         (elem) => elem.channel_id !== data.channel_id,
       );
-      console.log('is owner');
       return true;
     } else {
       const filtered_chat_user = this.chat_user.filter(
@@ -128,7 +128,6 @@ export class ChatService {
           message: 'Not a member of this channel',
         });
       this.chat_user = filtered_chat_user;
-      console.log('is not owner');
       return false;
     }
   }

@@ -6,5 +6,6 @@ export interface IChannel {
 }
 
 export interface IChannelData extends IChannel {
-  members: string[];
+  users: string[];
+  members: number;
 }
