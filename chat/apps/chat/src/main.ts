@@ -8,6 +8,8 @@ async function bootstrap() {
     {
       transport: Transport.TCP,
       options: {
+        // required for docker
+        host: 'chat',
         port: 3001,
       },
     },

@@ -7,7 +7,7 @@ services:
       dockerfile: ./apps/api/Dockerfile
       target: dev
     ports: 
-      - 3000:3000
+      - "3000:3000"
     volumes:
       - ./apps/api/:/usr/src/app/apps/api/
   chat:

@@ -12,6 +12,8 @@ const ChatClientOptions: ClientProviderOptions = {
   name: 'CHAT_SERVICE',
   transport: Transport.TCP,
   options: {
+    // required for docker
+    host: 'chat',
     port: 3001,
   },
 };
