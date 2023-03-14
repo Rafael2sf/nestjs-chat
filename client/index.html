@@ -154,10 +154,11 @@
 				  append_message(msg.user_id, msg.channel_id, msg.data);
         // handle message sent failed
 			});
-		})
 
-    const data = [1, 2, 3, 4, 5]
-    
+      socket.on('test', function (msg) {
+        console.log('[TEST]', msg);
+      });
+		})
 
 		function append_message(user, name, data)
 		{

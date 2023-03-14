@@ -6,12 +6,16 @@ import { CreateChannelDto } from './dto/CreateChannel.dto';
 import { CreateMessageDto } from './dto/CreateMessage.dto';
 import { GetMessagesDto } from './dto/GetMessagesDto';
 import { UserChannelDto } from './dto/UserChannel.dto';
+import { UserChannelActionDto } from './dto/UserChannelAction.dto';
 import {
   IChannel,
   IMessage,
   IChannelUser,
   IMutedUser,
   IChannelData,
+  UserLevel,
+  ChannelType,
+  ISimplifiedMessage,
 } from './interfaces/chat.interfaces';
 
 @Injectable()
@@ -53,15 +57,19 @@ export class ChatService {
     return this.channels;
   }
 
-  channelCreateOne(data: CreateChannelDto): string | undefined {
+  channelCreateOne(data: CreateChannelDto): string {
     const id = randomUUID();
     this.channels.push({
       id,
       owner: data.user_id,
       name: data.name,
-      type: 'public',
+      type: data.type as ChannelType,
     });
-    this.chat_user.push({ user_id: data.user_id, channel_id: id });
+    this.chat_user.push({
+      user_id: data.user_id,
+      channel_id: id,
+      permission: UserLevel.OWNER,
+    });
     return id;
   }
 
@@ -74,6 +82,7 @@ export class ChatService {
         statusCode: 403,
         message: 'Not enough permissions to delete this channel',
       });
+    this.chat_user.filter((elem) => elem.channel_id !== data.channel_id);
     this.channels = filered_channels;
   }
 
@@ -97,7 +106,10 @@ export class ChatService {
         message: 'Already joined this channel',
       });
     }
-    this.chat_user.push(data);
+    this.chat_user.push({
+      ...data,
+      permission: UserLevel.USER,
+    });
   }
 
   // returns true either the user is the owner of channel or not
@@ -175,7 +187,7 @@ export class ChatService {
   }
 
   // Messages
-  messageGetAll(data: GetMessagesDto): IMessage[] {
+  messageGetAll(data: GetMessagesDto): ISimplifiedMessage[] {
     if (
       !this.chat_user.find(
         (elem) =>
@@ -187,17 +199,19 @@ export class ChatService {
         message: 'Not a member of this channel',
       });
     }
-    const filtered_messages: IMessage[] = this.messages.filter(
-      (elem) => elem.channel_id === data.channel_id,
-    );
-    filtered_messages.reverse();
-    return filtered_messages.splice(data.offset, data.limit);
+    const messages: ISimplifiedMessage[] = [];
+    this.messages.map((elem) => {
+      if (elem.channel_id === data.channel_id)
+        messages.push({ id: elem.id, user_id: elem.user_id, data: elem.data });
+    });
+    messages.reverse();
+    return messages.splice(data.offset, data.limit);
   }
 
   messageCreate(data: CreateMessageDto): string {
     const is_muted = this.mute_hist.find(
       (elem) =>
-        elem.user_id === data.user_id && elem.channel_id === data.channel_id,
+        elem.target_id === data.user_id && elem.channel_id === data.channel_id,
     );
     if (is_muted && is_muted.timestamp >= Date.now()) {
       throw new RpcException({ statusCode: 403, message: 'muted' });
@@ -208,22 +222,59 @@ export class ChatService {
   }
 
   // mute
-  muteOne(data: IMutedUser) {
+  muteOne(data: UserChannelActionDto) {
+    const user = this.chat_user.find((elem) => elem.user_id === data.user_id);
+    const target = this.chat_user.find((elem) => elem.user_id === data.target_id);
+    if (
+      Object.values(UserLevel).indexOf(user.permission) <=
+      Object.values(UserLevel).indexOf(target.permission)
+    ) {
+      throw new RpcException({
+        statusCode: 403,
+        message: 'Not enought permission to mute this user',
+      });
+    }
     const is_muted = this.mute_hist.find(
       (elem) =>
-        elem.user_id === data.user_id && elem.channel_id === data.channel_id,
+        elem.target_id === data.target_id && elem.channel_id === data.channel_id,
     );
-    if (is_muted) is_muted.timestamp = Date.now() + data.timestamp * 60_000;
-    else {
+    if (is_muted) {
+      const prev_user = this.chat_user.find(
+        (elem) => elem.user_id === is_muted.user_id &&
+          elem.channel_id === data.channel_id,
+      );
+      if (
+        Object.values(UserLevel).indexOf(user.permission) <
+        Object.values(UserLevel).indexOf(prev_user.permission)
+      ) {
+        throw new RpcException({
+          statusCode: 403,
+          message: 'User is already muted by a higher user',
+        });
+      }
+      is_muted.timestamp = Date.now() + data.timestamp * 60_000;
+    } else {
       this.mute_hist.push({
         user_id: data.user_id,
+        target_id: data.target_id,
         channel_id: data.channel_id,
         timestamp: Date.now() + data.timestamp * 60_000,
       });
     }
   }
 
-  unmuteOne(data: IMutedUser) {
+  unmuteOne(data: UserChannelActionDto) {
+    const user = this.chat_user.find((elem) => elem.user_id === data.user_id);
+    const target = this.chat_user.find((elem) => elem.user_id === data.target_id);
+    if (
+      Object.values(UserLevel).indexOf(user.permission) <=
+      Object.values(UserLevel).indexOf(target.permission)
+    ) {
+      throw new RpcException({
+        statusCode: 403,
+        message: 'Not enought permission to unmute this user',
+      });
+    }
     const is_muted = this.mute_hist.find(
       (elem) =>
         elem.user_id === data.user_id && elem.channel_id === data.channel_id,
@@ -234,9 +285,22 @@ export class ChatService {
         message: 'Target user is not muted',
       });
     }
+    const prev_user = this.chat_user.find(
+      (elem) => elem.user_id === is_muted.user_id &&
+        elem.channel_id === data.channel_id,
+    );
+    if (
+      Object.values(UserLevel).indexOf(user.permission) <
+      Object.values(UserLevel).indexOf(prev_user.permission)
+    ) {
+      throw new RpcException({
+        statusCode: 403,
+        message: 'User was muted by a higher user',
+      });
+    }
     this.mute_hist = this.mute_hist.filter(
       (elem) =>
-        elem.user_id !== data.user_id || elem.channel_id !== data.channel_id,
+        elem.target_id !== target.user_id || elem.channel_id !== data.channel_id,
     );
   }
 }

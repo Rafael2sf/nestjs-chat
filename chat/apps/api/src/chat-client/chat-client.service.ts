@@ -1,8 +1,8 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import { firstValueFrom, Observable } from 'rxjs';
-import { CreateMuteDto } from './dto/CreateMute.dto';
 import { GetMessagesDto } from './dto/GetMessagesDto';
+import { UserChannelActionDto } from './dto/UserChannelAction.dto';
 import { IChannel, IChannelData } from './interfaces/IChannel';
 import { ISimplifiedMessage } from './interfaces/IChannelMessages';
 import { IMessage } from './interfaces/IUserMessage';
@@ -29,11 +29,12 @@ export class ChatClientService {
     return firstValueFrom(this.chatService.send<IChannel[]>('channel.all', {}));
   }
 
-  async createChannel(user_id: string, name: string): Promise<{ id: string }> {
+  async createChannel(user_id: string, name: string, type: string): Promise<{ id: string }> {
     const id = await firstValueFrom(
       this.chatService.send<string>('channel.create', {
         user_id,
         name,
+        type,
       }),
     );
     return { id };
@@ -82,12 +83,10 @@ export class ChatClientService {
   }
 
   // Messages
-  async getMessages(data: GetMessagesDto): Promise<ISimplifiedMessage[]> {
-    const messages = await firstValueFrom(
-      this.chatService.send<IMessage[]>('message.get', data),
+  getMessages(data: GetMessagesDto): Promise<ISimplifiedMessage[]> {
+    return firstValueFrom(
+      this.chatService.send<ISimplifiedMessage[]>('message.get', data),
     );
-    messages.filter((elem) => delete elem.channel_id);
-    return messages;
   }
 
   createMessage(message: IMessage): Promise<string> {
@@ -97,11 +96,11 @@ export class ChatClientService {
   }
 
   // mute
-  async muteUser(user: string, data: CreateMuteDto): Promise<void> {
+  async muteUser(data: UserChannelActionDto): Promise<void> {
     await firstValueFrom(this.chatService.send<void>('channel.mute', data));
   }
 
-  async unmuteUser(user: string, data: CreateMuteDto): Promise<void> {
+  async unmuteUser(data: UserChannelActionDto): Promise<void> {
     await firstValueFrom(this.chatService.send<void>('channel.unmute', data));
   }
 }

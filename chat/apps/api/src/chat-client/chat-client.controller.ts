@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  DefaultValuePipe,
   Delete,
   Get,
   Headers,
@@ -45,12 +46,8 @@ export class ChatClientController {
   private readonly logger = new Logger(ChatClientController.name);
 
   @Get()
-  async test_anything(@Res() res: Response): Promise<void> {
-    const result = await this.chatService
-      .test()
-      .then(() => console.log())
-      .catch((e) => console.error(e));
-    res.json(result);
+  async test_anything() {
+    this.chatGateway.server.emit('test', 'nice ...');
   }
 
   /**
@@ -80,7 +77,7 @@ export class ChatClientController {
     this.logger.log(`POST /channels/ jwt=${jwt}: name=${body.name}`);
     AsyncResponse(
       res,
-      this.chatService.createChannel(jwt.split(' ')[1], body.name),
+      this.chatService.createChannel(jwt.split(' ')[1], body.name, body.type),
     );
   }
 
@@ -114,8 +111,8 @@ export class ChatClientController {
   getChannel(
     @Headers('authorization') jwt: string,
     @Param('channel_id') channel_id: string,
-    @Query('limit', ParseIntPipe) limit: number,
-    @Query('offset', ParseIntPipe) offset: number,
+    @Query('limit', new DefaultValuePipe(0), ParseIntPipe) limit: number,
+    @Query('offset', new DefaultValuePipe(0), ParseIntPipe) offset: number,
     @Res() res: Response,
   ) {
     this.logger.log(`GET /channels/${channel_id}/ jwt=${jwt}`);
@@ -139,8 +136,8 @@ export class ChatClientController {
   getChannelMessages(
     @Headers('authorization') jwt: string,
     @Param('channel_id') channel_id: string,
-    @Query('limit', ParseIntPipe) limit: number,
-    @Query('offset', ParseIntPipe) offset: number,
+    @Query('limit', new DefaultValuePipe(0), ParseIntPipe) limit: number,
+    @Query('offset', new DefaultValuePipe(0), ParseIntPipe) offset: number,
     @Res() res: Response,
   ) {
     this.logger.log(`GET /channels/${channel_id}/history jwt=${jwt}`);
@@ -218,9 +215,10 @@ export class ChatClientController {
     );
     AsyncResponse(
       res,
-      this.chatService.muteUser(jwt.split(' ')[1], {
-        user_id: username,
+      this.chatService.muteUser({
+        user_id: jwt.split(' ')[1],
         channel_id,
+        target_id: username,
         timestamp,
       }),
     );
@@ -244,10 +242,10 @@ export class ChatClientController {
     );
     AsyncResponse(
       res,
-      this.chatService.unmuteUser(jwt.split(' ')[1], {
-        user_id: username,
+      this.chatService.unmuteUser({
+        user_id: jwt.split(' ')[1],
         channel_id,
-        timestamp: undefined,
+        target_id: username,
       }),
     );
   }

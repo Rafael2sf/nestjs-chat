@@ -6,11 +6,12 @@ import { CreateChannelDto } from './dto/CreateChannel.dto';
 import { CreateMessageDto } from './dto/CreateMessage.dto';
 import { GetMessagesDto } from './dto/GetMessagesDto';
 import { UserChannelDto } from './dto/UserChannel.dto';
+import { UserChannelActionDto } from './dto/UserChannelAction.dto';
 import {
   IChannel,
   IChannelData,
   IMessage,
-  IMutedUser,
+  ISimplifiedMessage,
 } from './interfaces/chat.interfaces';
 
 @Controller()
@@ -74,7 +75,7 @@ export class ChatController {
   }
 
   @MessagePattern('message.get')
-  OnMessageGet(@Payload() data: GetMessagesDto): IMessage[] {
+  OnMessageGet(@Payload() data: GetMessagesDto): ISimplifiedMessage[] {
     this.logger.log(`message.get: ${JSON.stringify(data)}`);
     return this.chatService.messageGetAll(data);
   }
@@ -86,14 +87,14 @@ export class ChatController {
   }
 
   @MessagePattern('channel.mute')
-  OnChannelMute(@Payload() data: IMutedUser): boolean {
+  OnChannelMute(@Payload() data: UserChannelActionDto): boolean {
     this.logger.log(`channel.mute: ${JSON.stringify(data)}`);
     this.chatService.muteOne(data);
     return true;
   }
 
   @MessagePattern('channel.unmute')
-  OnChannelUnmute(@Payload() data: IMutedUser): boolean {
+  OnChannelUnmute(@Payload() data: UserChannelActionDto): boolean {
     this.logger.log(`channel.unmute: ${JSON.stringify(data)}`);
     this.chatService.unmuteOne(data);
     return true;
